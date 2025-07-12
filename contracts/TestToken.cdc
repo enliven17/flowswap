@@ -1,4 +1,4 @@
-import FungibleToken from 0xf233dcee88fe0abe
+import FungibleToken from 0x9a0766d93b6608b7
 
 access(all) contract TestToken {
     access(all) var totalSupply: UFix64
@@ -55,6 +55,26 @@ access(all) contract TestToken {
             destroy from
             emit TokensBurned(amount: amount)
         }
+    }
+
+    // Dışa açık mint fonksiyonu
+    access(all) fun mint(amount: UFix64): @Vault {
+        let adminRef = self.account.storage.borrow<&Administrator>(from: self.AdminStoragePath)
+            ?? panic("Admin resource bulunamadı")
+        return <-adminRef.mintTokens(amount: amount)
+    }
+
+    // Mint to any recipient
+    access(all) fun mintTo(recipient: Address, amount: UFix64): @Vault {
+        let adminRef = self.account.storage.borrow<&Administrator>(from: self.AdminStoragePath)
+            ?? panic("Admin resource bulunamadı")
+        let mintedVault <- adminRef.mintTokens(amount: amount)
+        let recipientAccount = getAccount(recipient)
+        let receiverRef = recipientAccount.capabilities.get<&TestToken.Vault>(/public/testTokenVault)
+            .borrow()
+            ?? panic("Recipient vault bulunamadı")
+        receiverRef.deposit(from: <-mintedVault)
+        return <-self.createEmptyVault()
     }
 
     init() {

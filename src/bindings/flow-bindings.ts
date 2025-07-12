@@ -63,11 +63,10 @@ export class FlowSwapClient {
       const result = await query({
         cadence: `
           import FungibleToken from 0x9a0766d93b6608b7
-          import TestToken from 0xfbaa55ea2a76ff04
-          
+          import TestToken from 0x0726a2d1884cd909
           access(all) fun main(address: Address): Bool {
             let account = getAccount(address)
-            let vaultCap = account.capabilities.get<&TestToken.Vault>(/public/TestTokenBalance)
+            let vaultCap = account.capabilities.get<&TestToken.Vault>(/public/testTokenVault)
             return vaultCap.check()
           }
         `,
@@ -77,48 +76,6 @@ export class FlowSwapClient {
     } catch (error) {
       console.error("Error checking TestToken vault:", error);
       return false;
-    }
-  }
-
-  // Mint test tokens
-  async mintTestTokens(amount: number): Promise<string> {
-    try {
-      const result = await mutate({
-        cadence: `
-          import FungibleToken from 0x9a0766d93b6608b7
-          import TestToken from 0xfbaa55ea2a76ff04
-          
-          transaction(amount: UFix64) {
-            prepare(signer: auth(Storage, Capabilities) &Account) {
-              // Setup vault if it doesn't exist
-              if signer.storage.borrow<&TestToken.Vault>(from: /storage/TestTokenVault) == nil {
-                signer.storage.save(<- TestToken.createEmptyVault(vaultType: Type<@TestToken.Vault>()), to: /storage/TestTokenVault)
-                signer.capabilities.publish(
-                  signer.capabilities.storage.issue<&TestToken.Vault>(/storage/TestTokenVault),
-                  at: /public/TestTokenReceiver
-                )
-                signer.capabilities.publish(
-                  signer.capabilities.storage.issue<&TestToken.Vault>(/storage/TestTokenVault),
-                  at: /public/TestTokenBalance
-                )
-              }
-              
-              // Get capability to the vault
-              let vaultCap = signer.capabilities.get<&TestToken.Vault>(/public/TestTokenReceiver)
-              
-              // Mint tokens
-              TestToken.mintTokens(amount: amount, recipient: vaultCap)
-              
-              log("Minted ".concat(amount.toString()).concat(" TestTokens"))
-            }
-          }
-        `,
-        args: (arg: any, t: any) => [arg(amount.toFixed(1), t.UFix64)]
-      });
-      return result;
-    } catch (error) {
-      console.error("Error minting test tokens:", error);
-      throw error;
     }
   }
 
@@ -213,24 +170,19 @@ export class FlowSwapClient {
   private getTestTokenTransferTransaction(): string {
     return `
       import FungibleToken from 0x9a0766d93b6608b7
-      import TestToken from 0xfbaa55ea2a76ff04
-      
+      import TestToken from 0x0726a2d1884cd909
       transaction(to: Address, amount: UFix64) {
         let sentVault: @FungibleToken.Vault
-        
         prepare(signer: auth(Storage) &Account) {
-          let vaultRef = signer.storage.borrow<auth(FungibleToken.Withdraw) &TestToken.Vault>(from: /storage/TestTokenVault)
+          let vaultRef = signer.storage.borrow<auth(FungibleToken.Withdraw) &TestToken.Vault>(from: /storage/testTokenVault)
             ?? panic("Could not borrow reference to the owner's Vault!")
-          
           self.sentVault <- vaultRef.withdraw(amount: amount)
         }
-        
         execute {
           let recipient = getAccount(to)
-          let receiverRef = recipient.capabilities.get<&TestToken.Vault>(/public/TestTokenReceiver)
+          let receiverRef = recipient.capabilities.get<&TestToken.Vault>(/public/testTokenVault)
             .borrow()
             ?? panic("Could not borrow receiver reference to the recipient's Vault")
-          
           receiverRef.deposit(from: <-self.sentVault)
         }
       }

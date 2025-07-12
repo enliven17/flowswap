@@ -1,31 +1,38 @@
 {
-	"networks": {
-		"emulator": "127.0.0.1:3569",
-		"mainnet": "access.mainnet.nodes.onflow.org:9000",
-		"testnet": "access.devnet.nodes.onflow.org:9000"
-	},
-	"contracts": {
-		"TestToken": {
-			"source": "./contracts/TestToken.cdc",
-			"aliases": {
-				"testnet": "0xfbaa55ea2a76ff04"
-			}
-		},
-		"FlowSwap": {
-			"source": "./contracts/FlowSwap.cdc",
-			"aliases": {
-				"testnet": "0xfbaa55ea2a76ff04"
-			}
-		}
-	},
-	"accounts": {
-		"emulator-account": {
-			"address": "f8d6e0586b0a20c7",
-			"key": "2eae2f31cb5b756151fa11d82d649ce8dbdf19d9a12307b6d9a24eb725c4f9b5"
-		},
-		"testnet-account": {
-			"address": "0xfbaa55ea2a76ff04",
-			"key": "92d1684e667260ee6f6d03bf2d072a6f902c4296047b7171cc0f4918c776b122"
-		}
-	}
+  "contracts": {
+    "FlowSwap": {
+      "source": "./contracts/FlowSwap.cdc",
+      "aliases": {
+        "testnet": "0x0726a2d1884cd909"
+      }
+    },
+    "TestToken": {
+      "source": "./contracts/TestToken.cdc",
+      "aliases": {
+        "testnet": "0x0726a2d1884cd909"
+      }
+    }
+  },
+  "networks": {
+    "emulator": "127.0.0.1:3569",
+    "mainnet": "access.mainnet.nodes.onflow.org:9000",
+    "testnet": "access.devnet.nodes.onflow.org:9000"
+  },
+  "accounts": {
+    "testnet-deployer": {
+      "address": "0x0726a2d1884cd909",
+      "key": {
+        "type": "hex",
+        "index": 0,
+        "signatureAlgorithm": "ECDSA_P256",
+        "hashAlgorithm": "SHA3_256",
+        "privateKey": "7113bd591726cbc03bcb00693006e09225cbe43aa0fafed077afd33e8b58af14"
+      }
+    }
+  },
+  "deployments": {
+    "testnet": {
+      "testnet-deployer": ["TestToken", "FlowSwap"]
+    }
+  }
 }

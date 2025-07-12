@@ -17,13 +17,11 @@ import { cn } from '@/lib/utils';
 
 // Flow imports
 import { authenticate, unauthenticate, currentUser } from "@onflow/fcl";
-import { initializeFlow } from "@/config/flow";
 import { 
   FlowSwapClient, 
-  FlowToken, 
-  SwapState, 
   defaultTokens 
 } from "@/bindings/flow-bindings";
+import { FlowToken, SwapState } from "@/types/tokens";
 import { useLivePrice } from "@/hooks/useLivePrice";
 
 // UI Components
@@ -49,7 +47,7 @@ import {
 import "@/components/ui/hide-number-spin.css";
 
 // Initialize Flow configuration
-initializeFlow();
+
 
 // Global error handler for browser extension errors
 window.addEventListener('error', (event) => {
@@ -156,7 +154,7 @@ function FlowSwapBox() {
 
   // Flow client instance
   const flowClient = useMemo(() => {
-    return new FlowSwapClient(user?.addr);
+    return new FlowSwapClient();
   }, [user?.addr]);
 
   // State management
@@ -170,7 +168,8 @@ function FlowSwapBox() {
     isLoading: false,
     status: 'idle'
   });
-  const [needsTestTokenVault, setNeedsTestTokenVault] = useState(false);
+  // Remove needsTestTokenVault state - user already has tokens
+  // const [needsTestTokenVault, setNeedsTestTokenVault] = useState(false);
 
   // Fiyatı canlı olarak al
   const { price: livePrice, isConnected: priceConnected } = useLivePrice();
@@ -217,10 +216,11 @@ function FlowSwapBox() {
         const testTokenBalance = hasTestTokenVault ? await flowClient.getTestTokenBalance(user.addr) : 0;
         console.log('TestToken balance:', testTokenBalance);
         
-        setNeedsTestTokenVault(!hasTestTokenVault);
-        if (!hasTestTokenVault) {
-          console.log('User does not have TestToken vault set up');
-        }
+        // Remove vault setup check - user already has tokens
+        // setNeedsTestTokenVault(!hasTestTokenVault);
+        // if (!hasTestTokenVault) {
+        //   console.log('User does not have TestToken vault set up');
+        // }
 
         setTokensLive([
           {
@@ -246,55 +246,19 @@ function FlowSwapBox() {
     fetchBalances();
   }, [user?.addr, flowClient]);
 
-  // Setup TestToken vault function
-  const setupTestTokenVault = async () => {
-    if (!user?.addr) return;
-    
-    try {
-      setSwapState(prev => ({ ...prev, isLoading: true, status: "loading" }));
-      const txId = await flowClient.setupTestTokenVault();
-      console.log('TestToken vault setup transaction:', txId);
-      
-      // Wait a bit for transaction to be processed
-      setTimeout(() => {
-        window.location.reload();
-      }, 3000);
-      
-    } catch (error) {
-      console.error("Error setting up TestToken vault:", error);
-      setSwapState(prev => ({ 
-        ...prev, 
-        isLoading: false, 
-        status: "error",
-        error: error instanceof Error ? error.message : "Failed to setup TestToken vault"
-      }));
-    }
-  };
+  // Remove setupTestTokenVault function - user already has tokens
+  // const setupTestTokenVault = async () => {
+  //   // Vault setup removed - user already has TestTokens
+  // };
 
-  // Mint test tokens function
-  const mintTestTokens = async () => {
-    if (!user?.addr) return;
-    
-    try {
-      setSwapState(prev => ({ ...prev, isLoading: true, status: "loading" }));
-      const txId = await flowClient.mintTestTokens(1000); // Mint 1000 TEST tokens
-      console.log('TestToken mint transaction:', txId);
-      
-      // Wait a bit for transaction to be processed
-      setTimeout(() => {
-        window.location.reload();
-      }, 3000);
-      
-    } catch (error) {
-      console.error("Error minting test tokens:", error);
-      setSwapState(prev => ({ 
-        ...prev, 
-        isLoading: false, 
-        status: "error",
-        error: error instanceof Error ? error.message : "Failed to mint test tokens"
-      }));
-    }
-  };
+  // Remove mint-related state and functions
+  // const [mintAmount, setMintAmount] = useState<string>("1000");
+  // const [isMinting, setIsMinting] = useState(false);
+
+  // Remove mint function
+  // const handleMint = async () => {
+  //   // Mint functionality removed - user already has tokens
+  // };
 
   // Calculate swap amounts
   useEffect(() => {
@@ -381,12 +345,14 @@ function FlowSwapBox() {
       const amountOut = parseFloat(swapState.toAmount);
       const minAmountOut = amountOut * (1 - swapState.slippage / 100);
 
-      const txId = await flowClient.executeSwap(
-        swapState.fromToken.symbol,
-        swapState.toToken.symbol,
-        amountIn,
-        minAmountOut
-      );
+      let txId;
+      if (swapState.fromToken.symbol === "FLOW" && swapState.toToken.symbol === "TEST") {
+        txId = await flowClient.swapFlowToTestToken(amountIn, minAmountOut);
+      } else if (swapState.fromToken.symbol === "TEST" && swapState.toToken.symbol === "FLOW") {
+        txId = await flowClient.swapTestTokenToFlow(amountIn, minAmountOut);
+      } else {
+        throw new Error("Unsupported swap direction");
+      }
 
       setSwapState((p) => ({ 
         ...p, 
@@ -690,8 +656,8 @@ function FlowSwapBox() {
             </span>
           </div>
         </div>
-        {/* TestToken Vault Setup Notice */}
-        {user?.addr && needsTestTokenVault && (
+        {/* Remove TestToken Vault Setup Notice - user already has tokens */}
+        {/* {user?.addr && needsTestTokenVault && (
           <motion.div
             className="mb-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl"
             initial={{ opacity: 0, y: 10 }}
@@ -719,23 +685,9 @@ function FlowSwapBox() {
                     "Setup Vault"
                   )}
                 </button>
-                <button
-                  onClick={mintTestTokens}
-                  disabled={swapState.isLoading}
-                  className="flex-1 py-2 px-4 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 rounded-lg text-green-300 text-sm font-medium transition-colors disabled:opacity-50"
-                >
-                  {swapState.isLoading ? (
-                    <div className="flex items-center justify-center space-x-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Minting...</span>
-                    </div>
-                  ) : (
-                    "Mint 1000 TEST"
-                  )}
-                </button>
               </div>
           </motion.div>
-        )}
+        )} */}
 
         {/* Swap/Connect Button */}
         <div className="mt-8">
@@ -746,7 +698,7 @@ function FlowSwapBox() {
               swapState.isLoading && "bg-white/20 text-white cursor-not-allowed"
             )}
             onClick={handleSwap}
-            disabled={swapState.isLoading || !swapState.fromAmount || !swapState.toAmount || needsTestTokenVault}
+            disabled={swapState.isLoading || !swapState.fromAmount || !swapState.toAmount}
             variants={itemVariants}
           >
             {swapState.isLoading ? (
@@ -754,8 +706,6 @@ function FlowSwapBox() {
                 <Loader2 className="h-5 w-5 animate-spin" />
                 <span>Swapping...</span>
               </div>
-            ) : needsTestTokenVault ? (
-              "Setup TestToken Vault First"
             ) : (
               "Swap"
             )}
