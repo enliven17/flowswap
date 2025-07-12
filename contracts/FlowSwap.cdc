@@ -1,6 +1,6 @@
 import FungibleToken from 0x9a0766d93b6608b7
 import FlowToken from 0x7e60df042a9c0868
-import FUSD from 0xe223d8a629e49c68
+import USDC from 0x64adf39cbc354fcb
 
 /// FlowSwap - A simple token swap contract for Flow blockchain
 /// This is a basic implementation - you may want to add more features like:
@@ -54,7 +54,7 @@ pub contract FlowSwap {
         self.tokenAReserves = 0.0
         self.tokenBReserves = 0.0
         self.tokenASymbol = "FLOW"
-        self.tokenBSymbol = "FUSD"
+        self.tokenBSymbol = "USDC"
         self.admin = self.account.address
         self.swapFee = 0.003
     }

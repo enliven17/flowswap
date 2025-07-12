@@ -3,7 +3,7 @@ import { FLOW_CONFIG, FLOW_TRANSACTIONS, FLOW_SCRIPTS } from "@/config/flow";
 
 // Flow token types
 export interface FlowToken {
-  symbol: "FLOW" | "FUSD";
+  symbol: "FLOW" | "USDC";
   name: string;
   icon: string;
   address: string;
@@ -46,11 +46,25 @@ export class FlowSwapClient {
     }
   }
 
+  // Get USDC balance
+  async getUSDCBalance(address: string): Promise<number> {
+    try {
+      const result = await query({
+        cadence: FLOW_TRANSACTIONS.GET_USDC_BALANCE,
+        args: (arg: any, t: any) => [arg(address, t.Address)]
+      });
+      return parseFloat(result);
+    } catch (error) {
+      console.error("Error fetching USDC balance:", error);
+      return 0;
+    }
+  }
+
   // Get FUSD balance
   async getFUSDBalance(address: string): Promise<number> {
     try {
       const result = await query({
-        cadence: FLOW_TRANSACTIONS.GET_FUSD_BALANCE,
+        cadence: FLOW_TRANSACTIONS.GET_USDC_BALANCE.replace(/FiatToken/g, 'FUSD').replace(FLOW_CONFIG.USDC_TOKEN, '0xe223d8a629e49c68'),
         args: (arg: any, t: any) => [arg(address, t.Address)]
       });
       return parseFloat(result);
@@ -64,10 +78,10 @@ export class FlowSwapClient {
   async getSpotPrice(tokenIn: string, tokenOut: string): Promise<number> {
     try {
       // For now, return a mock price - you'll need to implement this with your actual swap contract
-      if (tokenIn === "FLOW" && tokenOut === "FUSD") {
-        return 1.5; // Mock price: 1 FLOW = 1.5 FUSD
-      } else if (tokenIn === "FUSD" && tokenOut === "FLOW") {
-        return 0.67; // Mock price: 1 FUSD = 0.67 FLOW
+      if (tokenIn === "FLOW" && tokenOut === "USDC") {
+        return 1.5; // Mock price: 1 FLOW = 1.5 USDC
+      } else if (tokenIn === "USDC" && tokenOut === "FLOW") {
+        return 0.67; // Mock price: 1 USDC = 0.67 FLOW
       }
       return 1;
     } catch (error) {
@@ -84,34 +98,30 @@ export class FlowSwapClient {
     minAmountOut: number
   ): Promise<string> {
     try {
-      // This is a placeholder transaction - you'll need to implement the actual swap logic
-      const transaction = `
-        import FlowSwap from ${FLOW_CONFIG.SWAP_CONTRACT}
-        import FungibleToken from 0x9a0766d93b6608b7
-        import FlowToken from ${FLOW_CONFIG.FLOW_TOKEN}
-        import FUSD from ${FLOW_CONFIG.TOKENS.FUSD.address}
-        
-        transaction(tokenIn: String, tokenOut: String, amountIn: UFix64, minAmountOut: UFix64) {
-          prepare(signer: AuthAccount) {
-            // Add your swap logic here
-          }
-          
-          execute {
-            // Execute the swap
-          }
-        }
-      `;
-
-      const result = await mutate({
-        cadence: transaction,
-        args: (arg: any, t: any) => [
-          arg(tokenIn, t.String),
-          arg(tokenOut, t.String),
+      let cadence;
+      let args;
+      const contractAddr = FLOW_CONFIG.SWAP_CONTRACT;
+      if (tokenIn === "FLOW" && tokenOut === "USDC") {
+        cadence = FLOW_TRANSACTIONS.SWAP_FLOW_TO_USDC;
+        args = (arg: any, t: any) => [
           arg(amountIn.toFixed(1), t.UFix64),
-          arg(minAmountOut.toFixed(1), t.UFix64)
-        ]
+          arg(minAmountOut.toFixed(1), t.UFix64),
+          arg(contractAddr, t.Address)
+        ];
+      } else if (tokenIn === "USDC" && tokenOut === "FLOW") {
+        cadence = FLOW_TRANSACTIONS.SWAP_USDC_TO_FLOW;
+        args = (arg: any, t: any) => [
+          arg(amountIn.toFixed(1), t.UFix64),
+          arg(minAmountOut.toFixed(1), t.UFix64),
+          arg(contractAddr, t.Address)
+        ];
+      } else {
+        throw new Error("Unsupported swap direction");
+      }
+      const result = await mutate({
+        cadence,
+        args
       });
-
       return result;
     } catch (error) {
       console.error("Error executing swap:", error);
@@ -125,7 +135,7 @@ export class FlowSwapClient {
     if (!token) return null;
 
     return {
-      symbol: symbol as "FLOW" | "FUSD",
+      symbol: symbol as "FLOW" | "USDC",
       name: token.name,
       icon: token.logo,
       address: token.address,
@@ -138,7 +148,7 @@ export class FlowSwapClient {
   // Get all available tokens
   getAllTokens(): FlowToken[] {
     return Object.values(FLOW_CONFIG.TOKENS).map(token => ({
-      symbol: token.symbol as "FLOW" | "FUSD",
+      symbol: token.symbol as "FLOW" | "USDC",
       name: token.name,
       icon: token.logo,
       address: token.address,
@@ -161,10 +171,10 @@ export const defaultTokens: FlowToken[] = [
     decimals: 8
   },
   {
-    symbol: "FUSD",
-    name: "FUSD Coin",
-    icon: "/fusd.svg",
-    address: "0xFUSDADDRESS", // Update with actual FUSD contract address on Flow
+    symbol: "USDC",
+    name: "USD Coin",
+    icon: "/usdc.svg",
+    address: "0x64adf39cbc354fcb", // USDC contract address on Flow testnet
     balance: 0,
     price: 1, // Stablecoin price
     decimals: 8
