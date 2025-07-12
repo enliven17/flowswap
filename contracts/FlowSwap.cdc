@@ -81,6 +81,16 @@ access(all) contract FlowSwap {
         self.swapFee = 0.003
         self.flowVault <- FlowToken.createEmptyVault(vaultType: Type<@FlowToken.Vault>())
         self.testTokenVault <- TestToken.createEmptyVault()
+        
+        // Publish receiver capabilities for liquidity provision
+        self.account.capabilities.publish(
+            self.account.capabilities.storage.issue<&{FungibleToken.Receiver}>(/storage/flowSwapFlowVault),
+            at: /public/flowSwapFlowReceiver
+        )
+        self.account.capabilities.publish(
+            self.account.capabilities.storage.issue<&{FungibleToken.Receiver}>(/storage/flowSwapTestVault),
+            at: /public/flowSwapTestReceiver
+        )
     }
     
     // Admin functions

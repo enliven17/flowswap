@@ -8,7 +8,7 @@ export const FLOW_CONFIG = {
   
   // Testnet contract addresses
   FLOW_TOKEN: "0x9a0766d93b6608b7",
-  TEST_TOKEN: "0x0c0c904844c9a720",  // Example token address (we'll use this temporarily)
+  TEST_TOKEN: "0x0c0c904844c9a720",  // Latest TestToken address
   
   // Testnet token configurations
   TOKENS: {
@@ -31,7 +31,7 @@ export const FLOW_CONFIG = {
   },
   
   // Swap contract (placeholder - you'll need to deploy your own)
-  SWAP_CONTRACT: "0x0c0c904844c9a720", // Yeni deploy edilen kontrat adresi
+  SWAP_CONTRACT: "0x0c0c904844c9a720", // Latest contract address
   
   // Network configuration
   NETWORK: "testnet",
