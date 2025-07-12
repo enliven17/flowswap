@@ -4,11 +4,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 5175",
+    "dev:full": "concurrently \"npm run dev\" \"npm run price-server\"",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "deploy:contract": "node scripts/deploy.cjs"
+    "deploy:contract": "node scripts/deploy.cjs",
+    "deploy:test-token": "node scripts/deploy-test-token.cjs",
+    "deploy:testtoken": "./scripts/deploy-testtoken.sh",
+    "deploy:full": "./scripts/deploy-testtoken.sh && echo '✅ TestToken deployed! Now deploy FlowSwap...'",
+    "price-server": "node scripts/price-server.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -76,6 +81,7 @@
     "@types/three": "^0.178.1",
     "@vitejs/plugin-react-swc": "^3.5.0",
     "autoprefixer": "^10.4.20",
+    "concurrently": "^9.2.0",
     "eslint": "^9.9.0",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.9",

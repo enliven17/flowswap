@@ -1,6 +1,6 @@
 import FungibleToken from 0x9a0766d93b6608b7
 import FlowToken from 0x7e60df042a9c0868
-import USDC from 0x64adf39cbc354fcb
+import TestToken from 0xfbaa55ea2a76ff04
 
 /// FlowSwap - A simple token swap contract for Flow blockchain
 /// This is a basic implementation - you may want to add more features like:
@@ -9,10 +9,10 @@ import USDC from 0x64adf39cbc354fcb
 /// - Fee collection
 /// - Slippage protection
 
-pub contract FlowSwap {
+access(all) contract FlowSwap {
     
     // Events
-    pub event SwapExecuted(
+    access(all) event SwapExecuted(
         user: Address,
         tokenIn: String,
         tokenOut: String,
@@ -20,7 +20,7 @@ pub contract FlowSwap {
         amountOut: UFix64
     )
     
-    pub event LiquidityAdded(
+    access(all) event LiquidityAdded(
         provider: Address,
         tokenA: String,
         tokenB: String,
@@ -28,7 +28,7 @@ pub contract FlowSwap {
         amountB: UFix64
     )
     
-    pub event LiquidityRemoved(
+    access(all) event LiquidityRemoved(
         provider: Address,
         tokenA: String,
         tokenB: String,
@@ -37,37 +37,45 @@ pub contract FlowSwap {
     )
     
     // Storage
-    pub var totalLiquidity: UFix64
-    pub var tokenAReserves: UFix64
-    pub var tokenBReserves: UFix64
-    pub var tokenASymbol: String
-    pub var tokenBSymbol: String
+    access(self) var totalLiquidity: UFix64
+    access(self) var tokenAReserves: UFix64
+    access(self) var tokenBReserves: UFix64
+    access(self) var tokenASymbol: String
+    access(self) var tokenBSymbol: String
     
     // Admin
-    pub var admin: Address
+    access(self) var admin: Address
     
     // Fee (0.3% = 0.003)
-    pub var swapFee: UFix64
+    access(self) var swapFee: UFix64
     
     init() {
         self.totalLiquidity = 0.0
         self.tokenAReserves = 0.0
         self.tokenBReserves = 0.0
         self.tokenASymbol = "FLOW"
-        self.tokenBSymbol = "USDC"
+        self.tokenBSymbol = "TEST"
         self.admin = self.account.address
         self.swapFee = 0.003
+        let flowVault <- FlowToken.createEmptyVault(vaultType: Type<@FlowToken.Vault>())
+        self.account.save(<-flowVault, to: /storage/flowTokenVault)
+        self.account.link<&FlowToken.Vault{FungibleToken.Receiver}>(/public/flowTokenReceiver, target: /storage/flowTokenVault)
+        self.account.link<&FlowToken.Vault{FungibleToken.Balance}>(/public/flowTokenBalance, target: /storage/flowTokenVault)
+        let testTokenVault <- TestToken.createEmptyVault()
+        self.account.save(<-testTokenVault, to: /storage/TestTokenVault)
+        self.account.link<&TestToken.Vault{FungibleToken.Receiver}>(/public/TestTokenReceiver, target: /storage/TestTokenVault)
+        self.account.link<&TestToken.Vault{FungibleToken.Balance}>(/public/TestTokenBalance, target: /storage/TestTokenVault)
     }
     
     // Admin functions
-    pub fun setAdmin(newAdmin: Address) {
+    access(all) fun setAdmin(newAdmin: Address) {
         pre {
             self.account.address == self.admin: "Only admin can set new admin"
         }
         self.admin = newAdmin
     }
     
-    pub fun setSwapFee(newFee: UFix64) {
+    access(all) fun setSwapFee(newFee: UFix64) {
         pre {
             self.account.address == self.admin: "Only admin can set swap fee"
             newFee < 0.1: "Fee cannot be more than 10%"
@@ -76,7 +84,7 @@ pub contract FlowSwap {
     }
     
     // Get current spot price
-    pub fun getSpotPrice(tokenIn: String, tokenOut: String): UFix64 {
+    access(all) fun getSpotPrice(tokenIn: String, tokenOut: String): UFix64 {
         if tokenIn == self.tokenASymbol && tokenOut == self.tokenBSymbol {
             if self.tokenAReserves == 0.0 {
                 return 0.0
@@ -92,7 +100,7 @@ pub contract FlowSwap {
     }
     
     // Calculate swap output amount
-    pub fun calculateSwapOutput(amountIn: UFix64, tokenIn: String, tokenOut: String): UFix64 {
+    access(all) fun calculateSwapOutput(amountIn: UFix64, tokenIn: String, tokenOut: String): UFix64 {
         if tokenIn == self.tokenASymbol && tokenOut == self.tokenBSymbol {
             let amountInWithFee = amountIn * (1.0 - self.swapFee)
             let numerator = amountInWithFee * self.tokenBReserves
@@ -108,7 +116,7 @@ pub contract FlowSwap {
     }
     
     // Execute swap
-    pub fun executeSwap(
+    access(all) fun executeSwap(
         tokenIn: String,
         tokenOut: String,
         amountIn: UFix64,
@@ -147,7 +155,7 @@ pub contract FlowSwap {
     }
     
     // Add liquidity (simplified - assumes equal value)
-    pub fun addLiquidity(
+    access(all) fun addLiquidity(
         amountA: UFix64,
         amountB: UFix64,
         provider: Address
@@ -185,7 +193,7 @@ pub contract FlowSwap {
     }
     
     // Remove liquidity
-    pub fun removeLiquidity(
+    access(all) fun removeLiquidity(
         liquidityAmount: UFix64,
         provider: Address
     ): {amountA: UFix64, amountB: UFix64} {
@@ -213,17 +221,17 @@ pub contract FlowSwap {
     }
     
     // Get reserves
-    pub fun getReserves(): {tokenA: UFix64, tokenB: UFix64} {
+    access(all) fun getReserves(): {tokenA: UFix64, tokenB: UFix64} {
         return {tokenA: self.tokenAReserves, tokenB: self.tokenBReserves}
     }
     
     // Get total liquidity
-    pub fun getTotalLiquidity(): UFix64 {
+    access(all) fun getTotalLiquidity(): UFix64 {
         return self.totalLiquidity
     }
     
     // Helper function for square root
-    pub fun sqrt(y: UFix64): UFix64 {
+    access(all) fun sqrt(y: UFix64): UFix64 {
         var z: UFix64 = 0.0
         if y > 3.0 {
             z = y

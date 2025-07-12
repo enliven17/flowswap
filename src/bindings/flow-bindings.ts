@@ -1,163 +1,245 @@
-import { query, mutate, tx } from "@onflow/fcl";
-import { FLOW_CONFIG, FLOW_TRANSACTIONS, FLOW_SCRIPTS } from "@/config/flow";
+import { query, mutate } from "@onflow/fcl";
+import { FLOW_CONFIG, FLOW_TRANSACTIONS } from "@/config/flow";
+import type { FlowToken } from "@/types/tokens";
 
-// Flow token types
-export interface FlowToken {
-  symbol: "FLOW" | "USDC";
-  name: string;
-  icon: string;
-  address: string;
-  balance: string | number;
-  price: number;
-  decimals: number;
-}
-
-// Swap state interface
-export interface SwapState {
-  fromToken: FlowToken;
-  toToken: FlowToken;
-  fromAmount: string;
-  toAmount: string;
-  slippage: number;
-  isLoading: boolean;
-  status: "idle" | "loading" | "success" | "error";
-  error?: string;
-}
-
-// Flow client class for contract interactions
+// Flow Client class to handle all Flow blockchain interactions
 export class FlowSwapClient {
-  private userAddress: string | null = null;
+  private config: typeof FLOW_CONFIG;
 
-  constructor(userAddress?: string) {
-    this.userAddress = userAddress || null;
+  constructor() {
+    this.config = FLOW_CONFIG;
   }
 
-  // Get user's FLOW balance
+  // Get Flow balance for an address
   async getFlowBalance(address: string): Promise<number> {
     try {
       const result = await query({
         cadence: FLOW_TRANSACTIONS.GET_BALANCE,
         args: (arg: any, t: any) => [arg(address, t.Address)]
       });
-      return Math.max(0, parseFloat(result));
+      return parseFloat(result);
     } catch (error) {
       console.error("Error fetching FLOW balance:", error);
       return 0;
     }
   }
 
-  // Get USDC balance
-  async getUSDCBalance(address: string): Promise<number> {
+  // Get TestToken balance
+  async getTestTokenBalance(address: string): Promise<number> {
     try {
       const result = await query({
-        cadence: FLOW_TRANSACTIONS.GET_USDC_BALANCE,
+        cadence: FLOW_TRANSACTIONS.GET_TEST_TOKEN_BALANCE,
         args: (arg: any, t: any) => [arg(address, t.Address)]
       });
       return parseFloat(result);
     } catch (error) {
-      console.error("Error fetching USDC balance:", error);
+      console.error("Error fetching TestToken balance:", error);
+      // If the error indicates missing vault, return 0 instead of throwing
+      if (error instanceof Error && error.message.includes("Could not borrow Vault reference")) {
+        console.log("TestToken vault not set up for user, returning 0 balance");
+        return 0;
+      }
       return 0;
     }
   }
 
-  // Get FUSD balance
-  async getFUSDBalance(address: string): Promise<number> {
+  // Setup TestToken vault for user
+  async setupTestTokenVault(): Promise<string> {
     try {
-      const result = await query({
-        cadence: FLOW_TRANSACTIONS.GET_USDC_BALANCE.replace(/FiatToken/g, 'FUSD').replace(FLOW_CONFIG.USDC_TOKEN, '0xe223d8a629e49c68'),
-        args: (arg: any, t: any) => [arg(address, t.Address)]
-      });
-      return parseFloat(result);
-    } catch (error) {
-      console.error("Error fetching FUSD balance:", error);
-      return 0;
-    }
-  }
-
-  // Get spot price from swap contract (placeholder)
-  async getSpotPrice(tokenIn: string, tokenOut: string): Promise<number> {
-    try {
-      // For now, return a mock price - you'll need to implement this with your actual swap contract
-      if (tokenIn === "FLOW" && tokenOut === "USDC") {
-        return 1.5; // Mock price: 1 FLOW = 1.5 USDC
-      } else if (tokenIn === "USDC" && tokenOut === "FLOW") {
-        return 0.67; // Mock price: 1 USDC = 0.67 FLOW
-      }
-      return 1;
-    } catch (error) {
-      console.error("Error fetching spot price:", error);
-      return 1;
-    }
-  }
-
-  // Execute swap transaction (placeholder)
-  async executeSwap(
-    tokenIn: string,
-    tokenOut: string,
-    amountIn: number,
-    minAmountOut: number
-  ): Promise<string> {
-    try {
-      let cadence;
-      let args;
-      const contractAddr = FLOW_CONFIG.SWAP_CONTRACT;
-      if (tokenIn === "FLOW" && tokenOut === "USDC") {
-        cadence = FLOW_TRANSACTIONS.SWAP_FLOW_TO_USDC;
-        args = (arg: any, t: any) => [
-          arg(amountIn.toFixed(1), t.UFix64),
-          arg(minAmountOut.toFixed(1), t.UFix64),
-          arg(contractAddr, t.Address)
-        ];
-      } else if (tokenIn === "USDC" && tokenOut === "FLOW") {
-        cadence = FLOW_TRANSACTIONS.SWAP_USDC_TO_FLOW;
-        args = (arg: any, t: any) => [
-          arg(amountIn.toFixed(1), t.UFix64),
-          arg(minAmountOut.toFixed(1), t.UFix64),
-          arg(contractAddr, t.Address)
-        ];
-      } else {
-        throw new Error("Unsupported swap direction");
-      }
       const result = await mutate({
-        cadence,
-        args
+        cadence: FLOW_TRANSACTIONS.SETUP_TEST_TOKEN_VAULT,
+        args: (arg: any, t: any) => []
       });
       return result;
     } catch (error) {
-      console.error("Error executing swap:", error);
+      console.error("Error setting up TestToken vault:", error);
       throw error;
     }
   }
 
-  // Get token metadata
-  getTokenMetadata(symbol: string): FlowToken | null {
-    const token = FLOW_CONFIG.TOKENS[symbol as keyof typeof FLOW_CONFIG.TOKENS];
-    if (!token) return null;
-
-    return {
-      symbol: symbol as "FLOW" | "USDC",
-      name: token.name,
-      icon: token.logo,
-      address: token.address,
-      balance: 0,
-      price: 0,
-      decimals: token.decimals
-    };
+  // Check if user has TestToken vault set up
+  async hasTestTokenVault(address: string): Promise<boolean> {
+    try {
+      const result = await query({
+        cadence: `
+          import FungibleToken from 0x9a0766d93b6608b7
+          import TestToken from 0xfbaa55ea2a76ff04
+          
+          access(all) fun main(address: Address): Bool {
+            let account = getAccount(address)
+            let vaultCap = account.capabilities.get<&TestToken.Vault>(/public/TestTokenBalance)
+            return vaultCap.check()
+          }
+        `,
+        args: (arg: any, t: any) => [arg(address, t.Address)]
+      });
+      return result === true;
+    } catch (error) {
+      console.error("Error checking TestToken vault:", error);
+      return false;
+    }
   }
 
-  // Get all available tokens
-  getAllTokens(): FlowToken[] {
-    return Object.values(FLOW_CONFIG.TOKENS).map(token => ({
-      symbol: token.symbol as "FLOW" | "USDC",
-      name: token.name,
-      icon: token.logo,
-      address: token.address,
-      balance: 0,
-      price: 0,
-      decimals: token.decimals
-    }));
+  // Mint test tokens
+  async mintTestTokens(amount: number): Promise<string> {
+    try {
+      const result = await mutate({
+        cadence: `
+          import FungibleToken from 0x9a0766d93b6608b7
+          import TestToken from 0xfbaa55ea2a76ff04
+          
+          transaction(amount: UFix64) {
+            prepare(signer: auth(Storage, Capabilities) &Account) {
+              // Setup vault if it doesn't exist
+              if signer.storage.borrow<&TestToken.Vault>(from: /storage/TestTokenVault) == nil {
+                signer.storage.save(<- TestToken.createEmptyVault(vaultType: Type<@TestToken.Vault>()), to: /storage/TestTokenVault)
+                signer.capabilities.publish(
+                  signer.capabilities.storage.issue<&TestToken.Vault>(/storage/TestTokenVault),
+                  at: /public/TestTokenReceiver
+                )
+                signer.capabilities.publish(
+                  signer.capabilities.storage.issue<&TestToken.Vault>(/storage/TestTokenVault),
+                  at: /public/TestTokenBalance
+                )
+              }
+              
+              // Get capability to the vault
+              let vaultCap = signer.capabilities.get<&TestToken.Vault>(/public/TestTokenReceiver)
+              
+              // Mint tokens
+              TestToken.mintTokens(amount: amount, recipient: vaultCap)
+              
+              log("Minted ".concat(amount.toString()).concat(" TestTokens"))
+            }
+          }
+        `,
+        args: (arg: any, t: any) => [arg(amount.toFixed(1), t.UFix64)]
+      });
+      return result;
+    } catch (error) {
+      console.error("Error minting test tokens:", error);
+      throw error;
+    }
+  }
+
+  // Swap FLOW to TestToken
+  async swapFlowToTestToken(amountIn: number, minAmountOut: number): Promise<string> {
+    try {
+      const result = await mutate({
+        cadence: FLOW_TRANSACTIONS.SWAP_FLOW_TO_TEST,
+        args: (arg: any, t: any) => [
+          arg(amountIn.toFixed(8), t.UFix64),
+          arg(minAmountOut.toFixed(8), t.UFix64),
+          arg(this.config.SWAP_CONTRACT, t.Address)
+        ]
+      });
+      return result;
+    } catch (error) {
+      console.error("Error swapping FLOW to TestToken:", error);
+      throw error;
+    }
+  }
+
+  // Swap TestToken to FLOW
+  async swapTestTokenToFlow(amountIn: number, minAmountOut: number): Promise<string> {
+    try {
+      const result = await mutate({
+        cadence: FLOW_TRANSACTIONS.SWAP_TEST_TO_FLOW,
+        args: (arg: any, t: any) => [
+          arg(amountIn.toFixed(8), t.UFix64),
+          arg(minAmountOut.toFixed(8), t.UFix64),
+          arg(this.config.SWAP_CONTRACT, t.Address)
+        ]
+      });
+      return result;
+    } catch (error) {
+      console.error("Error swapping TestToken to FLOW:", error);
+      throw error;
+    }
+  }
+
+  // Generic token transfer
+  async transferTokens(
+    tokenType: 'FLOW' | 'TEST',
+    amount: number,
+    recipient: string
+  ): Promise<string> {
+    try {
+      const cadence = tokenType === 'FLOW' 
+        ? this.getFlowTransferTransaction()
+        : this.getTestTokenTransferTransaction();
+      
+      const result = await mutate({
+        cadence,
+        args: (arg: any, t: any) => [
+          arg(recipient, t.Address),
+          arg(amount.toFixed(8), t.UFix64)
+        ]
+      });
+      return result;
+    } catch (error) {
+      console.error(`Error transferring ${tokenType} tokens:`, error);
+      throw error;
+    }
+  }
+
+  private getFlowTransferTransaction(): string {
+    return `
+      import FungibleToken from 0x9a0766d93b6608b7
+      import FlowToken from 0x7e60df042a9c0868
+      
+      transaction(to: Address, amount: UFix64) {
+        let sentVault: @FungibleToken.Vault
+        
+        prepare(signer: auth(Storage) &Account) {
+          let vaultRef = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(from: /storage/flowTokenVault)
+            ?? panic("Could not borrow reference to the owner's Vault!")
+          
+          self.sentVault <- vaultRef.withdraw(amount: amount)
+        }
+        
+        execute {
+          let recipient = getAccount(to)
+          let receiverRef = recipient.capabilities.get<&FlowToken.Vault>(/public/flowTokenReceiver)
+            .borrow()
+            ?? panic("Could not borrow receiver reference to the recipient's Vault")
+          
+          receiverRef.deposit(from: <-self.sentVault)
+        }
+      }
+    `;
+  }
+
+  private getTestTokenTransferTransaction(): string {
+    return `
+      import FungibleToken from 0x9a0766d93b6608b7
+      import TestToken from 0xfbaa55ea2a76ff04
+      
+      transaction(to: Address, amount: UFix64) {
+        let sentVault: @FungibleToken.Vault
+        
+        prepare(signer: auth(Storage) &Account) {
+          let vaultRef = signer.storage.borrow<auth(FungibleToken.Withdraw) &TestToken.Vault>(from: /storage/TestTokenVault)
+            ?? panic("Could not borrow reference to the owner's Vault!")
+          
+          self.sentVault <- vaultRef.withdraw(amount: amount)
+        }
+        
+        execute {
+          let recipient = getAccount(to)
+          let receiverRef = recipient.capabilities.get<&TestToken.Vault>(/public/TestTokenReceiver)
+            .borrow()
+            ?? panic("Could not borrow receiver reference to the recipient's Vault")
+          
+          receiverRef.deposit(from: <-self.sentVault)
+        }
+      }
+    `;
   }
 }
+
+// Create and export a singleton instance
+export const flowSwapClient = new FlowSwapClient();
 
 // Default tokens configuration
 export const defaultTokens: FlowToken[] = [
@@ -171,12 +253,12 @@ export const defaultTokens: FlowToken[] = [
     decimals: 8
   },
   {
-    symbol: "USDC",
-    name: "USD Coin",
-    icon: "/usdc.svg",
-    address: "0x64adf39cbc354fcb", // USDC contract address on Flow testnet
+    symbol: "TEST",
+    name: "Test Token",
+    icon: "/test-token.svg",
+    address: FLOW_CONFIG.TEST_TOKEN,
     balance: 0,
-    price: 1, // Stablecoin price
+    price: 1, // Test token price
     decimals: 8
   }
 ]; 

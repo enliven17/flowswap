@@ -8,7 +8,7 @@ export const FLOW_CONFIG = {
   
   // Testnet contract addresses
   FLOW_TOKEN: "0x7e60df042a9c0868",
-  USDC_TOKEN: "0x64adf39cbc354fcb",
+  TEST_TOKEN: "0x5e1659ef73549791",  // Example token address (we'll use this temporarily)
   
   // Testnet token configurations
   TOKENS: {
@@ -20,13 +20,13 @@ export const FLOW_CONFIG = {
       logo: "/flow.svg",
       description: "Native Flow token"
     },
-    USDC: {
-      name: "USD Coin",
-      symbol: "USDC",
-      decimals: 8,
-      address: "0x64adf39cbc354fcb",
-      logo: "/usdc.svg",
-      description: "USD Coin stablecoin"
+    TEST: {
+      name: "Test Token", 
+      symbol: "TEST", 
+      decimals: 8, 
+      address: "0xfbaa55ea2a76ff04", 
+      logo: "/test-token.svg", 
+      description: "Test token for FlowSwap" 
     }
   },
   
@@ -38,16 +38,13 @@ export const FLOW_CONFIG = {
   CHAIN_ID: "testnet"
 };
 
-// Initialize FCL configuration
-export function initializeFlow() {
-  config({
-    "accessNode.api": FLOW_CONFIG.ACCESS_NODE,
-    "discovery.wallet": FLOW_CONFIG.WALLET_DISCOVERY,
-    "fcl.network": FLOW_CONFIG.NETWORK,
-    "app.detail.title": "FlowSwap",
-    "app.detail.icon": "/flowswap-logo.png"
-  });
-}
+// Initialize Flow configuration
+config({
+  "accessNode.api": FLOW_CONFIG.ACCESS_NODE,
+  "discovery.wallet": FLOW_CONFIG.WALLET_DISCOVERY,
+  "0x9a0766d93b6608b7": FLOW_CONFIG.FLOW_TOKEN,
+  "0xfbaa55ea2a76ff04": FLOW_CONFIG.TEST_TOKEN,
+});
 
 // Flow transaction templates
 export const FLOW_TRANSACTIONS = {
@@ -62,112 +59,93 @@ export const FLOW_TRANSACTIONS = {
     }
   `,
   
-  GET_USDC_BALANCE: `
+  GET_TEST_TOKEN_BALANCE: `
     import FungibleToken from 0x9a0766d93b6608b7
-    import USDC from ${FLOW_CONFIG.TOKENS.USDC.address}
+    import TestToken from 0xfbaa55ea2a76ff04
     
     access(all) fun main(address: Address): UFix64 {
       let account = getAccount(address)
-      let vaultRef = account.capabilities.get<&USDC.Vault>(/public/USDCBalance).borrow() ?? panic("Could not borrow Vault reference")
+      let vaultRef = account.capabilities.get<&TestToken.Vault>(/public/TestTokenBalance).borrow() ?? panic("Could not borrow Vault reference")
       return vaultRef.balance
     }
   `,
-  SWAP_FLOW_TO_USDC: `
+  SWAP_FLOW_TO_TEST: `
     import FungibleToken from 0x9a0766d93b6608b7
     import FlowToken from 0x7e60df042a9c0868
-    import USDC from 0x64adf39cbc354fcb
+    import TestToken from 0xfbaa55ea2a76ff04
     
     transaction(amountIn: UFix64, minAmountOut: UFix64, contractAddr: Address) {
-      prepare(signer: AuthAccount) {
-        // 1. Withdraw FLOW from user
-        let flowVault = signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)
+      prepare(signer: auth(Storage, Capabilities) &Account) {
+        let flowVault = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(from: /storage/flowTokenVault)
           ?? panic("Could not borrow user's FlowToken Vault")
         let withdrawnFlow <- flowVault.withdraw(amount: amountIn)
-
-        // 2. Deposit FLOW to contract
         let contractAccount = getAccount(contractAddr)
         let contractFlowReceiver = contractAccount.capabilities.get<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
           .borrow()
           ?? panic("Could not borrow contract's FlowToken receiver")
         contractFlowReceiver.deposit(from: <- withdrawnFlow)
-
-        // 3. Withdraw USDC from contract and send to user
-        let contractUSDCVault = contractAccount.capabilities.get<&USDC.Vault>(/public/USDCVault)
+        let contractTestTokenVault = contractAccount.capabilities.get<auth(FungibleToken.Withdraw) &TestToken.Vault>(/public/TestTokenVault)
           .borrow()
-          ?? panic("Could not borrow contract's USDC Vault")
-        let usdcToSend <- contractUSDCVault.withdraw(amount: minAmountOut)
-
-        // 4. Create USDC vault for user if needed
-        if signer.borrow<&USDC.Vault>(from: /storage/USDCVault) == nil {
-          signer.save(<- USDC.createEmptyVault(), to: /storage/USDCVault)
-          signer.link<&USDC.Vault>(
-            /public/USDCReceiver,
-            target: /storage/USDCVault
-          )
+          ?? panic("Could not borrow contract's TestToken Vault")
+        let testTokenToSend <- contractTestTokenVault.withdraw(amount: minAmountOut)
+        if signer.storage.borrow<&TestToken.Vault>(from: /storage/TestTokenVault) == nil {
+          signer.storage.save(<- TestToken.createEmptyVault(vaultType: Type<@TestToken.Vault>()), to: /storage/TestTokenVault)
+          let receiverCap = signer.capabilities.storage.issue<&TestToken.Vault>(/storage/TestTokenVault)
+          signer.capabilities.publish(receiverCap, at: /public/TestTokenReceiver)
         }
-        let userUSDCReceiver = signer.getCapability(/public/USDCReceiver)
-          .borrow<&{FungibleToken.Receiver}>()
-          ?? panic("Could not borrow user's USDC receiver")
-        userUSDCReceiver.deposit(from: <- usdcToSend)
+        let userTestTokenReceiver = signer.capabilities.get<&TestToken.Vault>(/public/TestTokenReceiver)
+          .borrow()
+          ?? panic("Could not borrow user's TestToken receiver")
+        userTestTokenReceiver.deposit(from: <- testTokenToSend)
       }
     }
   `,
-  SWAP_USDC_TO_FLOW: `
+  SWAP_TEST_TO_FLOW: `
     import FungibleToken from 0x9a0766d93b6608b7
     import FlowToken from 0x7e60df042a9c0868
-    import USDC from 0x64adf39cbc354fcb
+    import TestToken from 0xfbaa55ea2a76ff04
     
     transaction(amountIn: UFix64, minAmountOut: UFix64, contractAddr: Address) {
-      prepare(signer: AuthAccount) {
-        // 1. Withdraw USDC from user
-        let usdcVault = signer.borrow<&USDC.Vault>(from: /storage/USDCVault)
-          ?? panic("Could not borrow user's USDC Vault")
-        let withdrawnUSDC <- usdcVault.withdraw(amount: amountIn)
-
-        // 2. Deposit USDC to contract
+      prepare(signer: auth(Storage, Capabilities) &Account) {
+        let testTokenVault = signer.storage.borrow<auth(FungibleToken.Withdraw) &TestToken.Vault>(from: /storage/TestTokenVault)
+          ?? panic("Could not borrow user's TestToken Vault")
+        let withdrawnTestToken <- testTokenVault.withdraw(amount: amountIn)
         let contractAccount = getAccount(contractAddr)
-        let contractUSDCReceiver = contractAccount.capabilities.get<&{FungibleToken.Receiver}>(/public/USDCReceiver)
+        let contractTestTokenReceiver = contractAccount.capabilities.get<&TestToken.Vault>(/public/TestTokenReceiver)
           .borrow()
-          ?? panic("Could not borrow contract's USDC receiver")
-        contractUSDCReceiver.deposit(from: <- withdrawnUSDC)
-
-        // 3. Withdraw FLOW from contract and send to user
-        let contractFlowVault = contractAccount.capabilities.get<&FlowToken.Vault>(/public/flowTokenVault)
+          ?? panic("Could not borrow contract's TestToken receiver")
+        contractTestTokenReceiver.deposit(from: <- withdrawnTestToken)
+        let contractFlowVault = contractAccount.capabilities.get<auth(FungibleToken.Withdraw) &FlowToken.Vault>(/public/flowTokenVault)
           .borrow()
           ?? panic("Could not borrow contract's FlowToken Vault")
         let flowToSend <- contractFlowVault.withdraw(amount: minAmountOut)
-
-        // 4. Create FLOW vault for user if needed
-        if signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault) == nil {
-          signer.save(<- FlowToken.createEmptyVault(), to: /storage/flowTokenVault)
-          signer.link<&FlowToken.Vault>(
-            /public/flowTokenReceiver,
-            target: /storage/flowTokenVault
-          )
+        if signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault) == nil {
+          signer.storage.save(<- FlowToken.createEmptyVault(vaultType: Type<@FlowToken.Vault>()), to: /storage/flowTokenVault)
+          let receiverCap = signer.capabilities.storage.issue<&FlowToken.Vault>(/storage/flowTokenVault)
+          signer.capabilities.publish(receiverCap, at: /public/flowTokenReceiver)
         }
-        let userFlowReceiver = signer.getCapability(/public/flowTokenReceiver)
-          .borrow<&{FungibleToken.Receiver}>()
+        let userFlowReceiver = signer.capabilities.get<&FlowToken.Vault>(/public/flowTokenReceiver)
+          .borrow()
           ?? panic("Could not borrow user's Flow receiver")
         userFlowReceiver.deposit(from: <- flowToSend)
       }
     }
   `,
-  SETUP_USDC_VAULT: `
+  SETUP_TEST_TOKEN_VAULT: `
     import FungibleToken from 0x9a0766d93b6608b7
-    import USDC from 0x64adf39cbc354fcb
+    import TestToken from 0xfbaa55ea2a76ff04
     
-    transaction {
-      prepare(signer: AuthAccount) {
-        // USDC Vault yoksa oluştur
-        if signer.borrow<&USDC.Vault>(from: /storage/USDCVault) == nil {
-          signer.save(<- USDC.createEmptyVault(), to: /storage/USDCVault)
-          signer.link<&USDC.Vault{FungibleToken.Receiver}>(
-            /public/USDCReceiver,
-            target: /storage/USDCVault
+    transaction() {
+      prepare(signer: auth(Storage, Capabilities) &Account) {
+        if signer.storage.borrow<&TestToken.Vault>(from: /storage/TestTokenVault) == nil {
+          signer.storage.save(<- TestToken.createEmptyVault(vaultType: Type<@TestToken.Vault>()), to: /storage/TestTokenVault)
+          signer.capabilities.publish(
+            signer.capabilities.storage.issue<&TestToken.Vault>(/storage/TestTokenVault),
+            at: /public/TestTokenReceiver
           )
-          signer.link<&USDC.Vault{FungibleToken.Balance}>(
-            /public/USDCBalance,
-            target: /storage/USDCVault
+          signer.capabilities.publish(
+            signer.capabilities.storage.issue<&TestToken.Vault>(/storage/TestTokenVault),
+            at: /public/TestTokenBalance
           )
         }
       }
