@@ -5,13 +5,17 @@ import FlowSwap from 0x0c0c904844c9a720
 
 transaction(amountFlow: UFix64, amountTestToken: UFix64) {
   prepare(signer: auth(Storage, Capabilities) &Account) {
-    let flowVault = signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)
-      ?? panic("No Flow vault")
-    let withdrawnFlow <- flowVault.withdraw(amount: amountFlow)
+    // Get FlowToken provider capability
+    let flowProvider = signer.capabilities.get<&{FungibleToken.Provider}>(/public/flowTokenProvider)
+      .borrow()
+      ?? panic("FlowToken provider capability not found")
+    let withdrawnFlow <- flowProvider.withdraw(amount: amountFlow)
 
-    let testTokenVault = signer.storage.borrow<&TestToken.Vault>(from: /storage/testTokenVault)
-      ?? panic("No TestToken vault")
-    let withdrawnTestToken <- testTokenVault.withdraw(amount: amountTestToken)
+    // Get TestToken provider capability
+    let testProvider = signer.capabilities.get<&{FungibleToken.Provider}>(/public/testTokenProvider)
+      .borrow()
+      ?? panic("TestToken provider capability not found")
+    let withdrawnTestToken <- testProvider.withdraw(amount: amountTestToken)
 
     let contractAccount = getAccount(0x0c0c904844c9a720)
 

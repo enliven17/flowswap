@@ -5,28 +5,33 @@ import FlowSwap from 0x0c0c904844c9a720
 
 transaction(amountFlow: UFix64, amountTestToken: UFix64) {
   prepare(signer: auth(Storage, Capabilities) &Account) {
-    let flowVault = signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)
+    // Withdraw FLOW from signer's vault using capability
+    let flowVault = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(from: /storage/flowTokenVault)
       ?? panic("No Flow vault")
     let withdrawnFlow <- flowVault.withdraw(amount: amountFlow)
 
-    let testTokenVault = signer.storage.borrow<&TestToken.Vault>(from: /storage/testTokenVault)
+    // Withdraw TestToken from signer's vault using capability
+    let testTokenVault = signer.storage.borrow<auth(FungibleToken.Withdraw) &TestToken.Vault>(from: /storage/testTokenVault)
       ?? panic("No TestToken vault")
     let withdrawnTestToken <- testTokenVault.withdraw(amount: amountTestToken)
 
     let contractAccount = getAccount(0x0c0c904844c9a720)
 
+    // Deposit FLOW to FlowSwap contract using receiver capability
     let flowReceiver = contractAccount.capabilities.get<&{FungibleToken.Receiver}>(/public/flowSwapFlowReceiver)
       .borrow()
       ?? panic("FlowSwap FLOW receiver not found")
     flowReceiver.deposit(from: <- withdrawnFlow)
 
-    let testReceiver = contractAccount.capabilities.get<&{FungibleToken.Receiver}>(/public/flowSwapTestReceiver)
+    // Deposit TestToken to FlowSwap contract using receiver capability
+    let testReceiver = contractAccount.capabilities.get<&TestToken.Vault>(/public/flowSwapTestReceiver)
       .borrow()
       ?? panic("FlowSwap TestToken receiver not found")
     testReceiver.deposit(from: <- withdrawnTestToken)
   }
 
   execute {
-    FlowSwap.addLiquidity(amountA: amountFlow, amountB: amountTestToken, provider: 0xfd90865386855394)
+    // Call addLiquidity function
+    FlowSwap.addLiquidity(amountA: amountFlow, amountB: amountTestToken, provider: 0x0c0c904844c9a720)
   }
 } 

@@ -1,38 +1,62 @@
 {
-  "contracts": {
-    "FlowSwap": {
-      "source": "./contracts/FlowSwap.cdc",
-      "aliases": {
-        "testnet": "0x0726a2d1884cd909"
-      }
-    },
-    "TestToken": {
-      "source": "./contracts/TestToken.cdc",
-      "aliases": {
-        "testnet": "0x0726a2d1884cd909"
-      }
-    }
-  },
-  "networks": {
-    "emulator": "127.0.0.1:3569",
-    "mainnet": "access.mainnet.nodes.onflow.org:9000",
-    "testnet": "access.devnet.nodes.onflow.org:9000"
-  },
-  "accounts": {
-    "testnet-deployer": {
-      "address": "0x0726a2d1884cd909",
-      "key": {
-        "type": "hex",
-        "index": 0,
-        "signatureAlgorithm": "ECDSA_P256",
-        "hashAlgorithm": "SHA3_256",
-        "privateKey": "7113bd591726cbc03bcb00693006e09225cbe43aa0fafed077afd33e8b58af14"
-      }
-    }
-  },
-  "deployments": {
-    "testnet": {
-      "testnet-deployer": ["TestToken", "FlowSwap"]
-    }
-  }
+	"contracts": {
+		"FlowSwap": {
+			"source": "./contracts/FlowSwap.cdc",
+			"aliases": {
+				"testnet": "0c0c904844c9a720"
+			}
+		},
+		"TestToken": {
+			"source": "./contracts/TestToken.cdc",
+			"aliases": {
+				"testnet": "0c0c904844c9a720"
+			}
+		}
+	},
+	"networks": {
+		"emulator": "127.0.0.1:3569",
+		"mainnet": "access.mainnet.nodes.onflow.org:9000",
+		"testnet": "access.devnet.nodes.onflow.org:9000"
+	},
+	"accounts": {
+		"flowswap": {
+			"address": "fd90865386855394",
+			"key": {
+				"type": "file",
+				"location": "flowswap.pkey"
+			}
+		},
+		"new-account": {
+			"address": "0000000000000001",
+			"key": "d54b8ee49061d4a8880c4b3378b6dba02c92a96821054ca271cac96c13a24bc0"
+		},
+		"testnet-deployer": {
+			"address": "0c0c904844c9a720",
+			"key": {
+				"type": "hex",
+				"index": 0,
+				"signatureAlgorithm": "ECDSA_P256",
+				"hashAlgorithm": "SHA3_256",
+				"privateKey": "a78efaf1fdbb987d1d4bfbe4ff612d823149233e93dbba2adf4b55f52d408e8d"
+			}
+		},
+		"user-1ea8": {
+			"address": "1ea8aa64021ac57d",
+			"key": {
+				"type": "hex",
+				"index": 0,
+				"signatureAlgorithm": "ECDSA_secp256k1",
+				"hashAlgorithm": "SHA2_256",
+				"privateKey": "a0317b7ff44af446387ef2eb3e692b94cd60510e147905039362c5c3445a73ac"
+			}
+		}
+	},
+	"deployments": {
+		"testnet": {
+			"testnet-deployer": [
+				"TestToken",
+				"FlowSwap"
+			]
+		}
+	}
 }

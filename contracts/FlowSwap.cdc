@@ -109,6 +109,57 @@ access(all) contract FlowSwap {
         self.swapFee = newFee
     }
     
+    // Admin function to add liquidity directly
+    access(all) fun adminAddLiquidity(
+        amountA: UFix64,
+        amountB: UFix64,
+        provider: Address
+    ) : UFix64 {
+        pre {
+            self.account.address == self.admin: "Only admin can add liquidity"
+            amountA > 0.0: "Amount A must be greater than 0"
+            amountB > 0.0: "Amount B must be greater than 0"
+        }
+        // Transfer FLOW from admin vault to FlowSwap vault
+        let adminFlowVault = self.account.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(from: /storage/flowTokenVault)
+            ?? panic("Admin Flow vault not found")
+        let flowToTransfer <- adminFlowVault.withdraw(amount: amountA)
+        self.flowVault.deposit(from: <- flowToTransfer)
+        // Transfer TestToken from admin vault to FlowSwap vault
+        let adminTestVault = self.account.storage.borrow<auth(FungibleToken.Withdraw) &TestToken.Vault>(from: /storage/testTokenVault)
+            ?? panic("Admin TestToken vault not found")
+        let testToTransfer <- adminTestVault.withdraw(amount: amountB)
+        self.testTokenVault.deposit(from: <- testToTransfer)
+        
+        // Calculate and add liquidity
+        var liquidityMinted: UFix64 = 0.0
+        if self.totalLiquidity == 0.0 {
+            liquidityMinted = self.sqrt(y: amountA * amountB)
+        } else {
+            let liquidityA = (amountA * self.totalLiquidity) / self.tokenAReserves
+            let liquidityB = (amountB * self.totalLiquidity) / self.tokenBReserves
+            if liquidityA < liquidityB {
+                liquidityMinted = liquidityA
+            } else {
+                liquidityMinted = liquidityB
+            }
+        }
+        
+        self.tokenAReserves = self.tokenAReserves + amountA
+        self.tokenBReserves = self.tokenBReserves + amountB
+        self.totalLiquidity = self.totalLiquidity + liquidityMinted
+        
+        emit LiquidityAdded(
+            provider: provider,
+            tokenA: self.tokenASymbol,
+            tokenB: self.tokenBSymbol,
+            amountA: amountA,
+            amountB: amountB
+        )
+        
+        return liquidityMinted
+    }
+    
     // Get current spot price
     access(all) fun getSpotPrice(tokenIn: String, tokenOut: String): UFix64 {
         if tokenIn == self.tokenASymbol && tokenOut == self.tokenBSymbol {

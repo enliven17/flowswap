@@ -63,7 +63,7 @@ export class FlowSwapClient {
       const result = await query({
         cadence: `
           import FungibleToken from 0x9a0766d93b6608b7
-          import TestToken from 0x0726a2d1884cd909
+          import TestToken from 0x0c0c904844c9a720
           access(all) fun main(address: Address): Bool {
             let account = getAccount(address)
             let vaultCap = account.capabilities.get<&TestToken.Vault>(/public/testTokenVault)
@@ -76,6 +76,24 @@ export class FlowSwapClient {
     } catch (error) {
       console.error("Error checking TestToken vault:", error);
       return false;
+    }
+  }
+
+  // Refresh all balances for a user
+  async refreshBalances(address: string): Promise<{ flow: number; test: number }> {
+    try {
+      const [flowBalance, testBalance] = await Promise.all([
+        this.getFlowBalance(address),
+        this.getTestTokenBalance(address)
+      ]);
+      
+      return {
+        flow: flowBalance,
+        test: testBalance
+      };
+    } catch (error) {
+      console.error("Error refreshing balances:", error);
+      return { flow: 0, test: 0 };
     }
   }
 
@@ -170,7 +188,7 @@ export class FlowSwapClient {
   private getTestTokenTransferTransaction(): string {
     return `
       import FungibleToken from 0x9a0766d93b6608b7
-      import TestToken from 0x0726a2d1884cd909
+      import TestToken from 0x0c0c904844c9a720
       transaction(to: Address, amount: UFix64) {
         let sentVault: @FungibleToken.Vault
         prepare(signer: auth(Storage) &Account) {

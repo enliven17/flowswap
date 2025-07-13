@@ -362,9 +362,30 @@ function FlowSwapBox() {
         toAmount: ""
       }));
 
-      // Refresh balances
-      setTimeout(() => {
-        window.location.reload();
+      // Refresh balances after successful swap
+      setTimeout(async () => {
+        try {
+          const balances = await flowClient.refreshBalances(user.addr);
+          
+          setTokensLive([
+            {
+              ...defaultTokens[0],
+              balance: balances.flow.toFixed(4)
+            },
+            {
+              ...defaultTokens[1],
+              balance: balances.test.toFixed(4)
+            }
+          ]);
+
+          setSwapState(prev => ({
+            ...prev,
+            fromToken: { ...prev.fromToken, balance: balances.flow.toFixed(4) },
+            toToken: { ...prev.toToken, balance: balances.test.toFixed(4) }
+          }));
+        } catch (error) {
+          console.error("Error refreshing balances:", error);
+        }
       }, 2000);
 
     } catch (error) {

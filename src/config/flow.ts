@@ -43,7 +43,7 @@ config({
   "accessNode.api": FLOW_CONFIG.ACCESS_NODE,
   "discovery.wallet": FLOW_CONFIG.WALLET_DISCOVERY,
   "0x9a0766d93b6608b7": FLOW_CONFIG.FLOW_TOKEN,
-  "0xfbaa55ea2a76ff04": FLOW_CONFIG.TEST_TOKEN,
+  "0x0c0c904844c9a720": FLOW_CONFIG.TEST_TOKEN,
 });
 
 // Flow transaction templates
@@ -75,7 +75,7 @@ export const FLOW_TRANSACTIONS = {
   SWAP_FLOW_TO_TEST: `
     import FungibleToken from 0x9a0766d93b6608b7
     import FlowToken from 0x7e60df042a9c0868
-    import TestToken from 0xfbaa55ea2a76ff04
+    import TestToken from 0x0c0c904844c9a720
     
     transaction(amountIn: UFix64, minAmountOut: UFix64, contractAddr: Address) {
       prepare(signer: auth(Storage, Capabilities) &Account) {
@@ -83,20 +83,20 @@ export const FLOW_TRANSACTIONS = {
           ?? panic("Could not borrow user's FlowToken Vault")
         let withdrawnFlow <- flowVault.withdraw(amount: amountIn)
         let contractAccount = getAccount(contractAddr)
-        let contractFlowReceiver = contractAccount.capabilities.get<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
+        let contractFlowReceiver = contractAccount.capabilities.get<&{FungibleToken.Receiver}>(/public/flowSwapFlowReceiver)
           .borrow()
           ?? panic("Could not borrow contract's FlowToken receiver")
         contractFlowReceiver.deposit(from: <- withdrawnFlow)
-        let contractTestTokenVault = contractAccount.capabilities.get<&TestToken.Vault>(/public/testTokenVault)
+        let contractTestTokenVault = contractAccount.capabilities.get<&TestToken.Vault>(/public/flowSwapTestReceiver)
           .borrow()
           ?? panic("Could not borrow contract's TestToken Vault")
         let testTokenToSend <- contractTestTokenVault.withdraw(amount: minAmountOut)
-        if signer.storage.borrow<&TestToken.Vault>(from: /storage/TestTokenVault) == nil {
-          signer.storage.save(<- TestToken.createEmptyVault(), to: /storage/TestTokenVault)
-          let receiverCap = signer.capabilities.storage.issue<&TestToken.Vault>(/storage/TestTokenVault)
-          signer.capabilities.publish(receiverCap, at: /public/TestTokenReceiver)
+        if signer.storage.borrow<&TestToken.Vault>(from: /storage/testTokenVault) == nil {
+          signer.storage.save(<- TestToken.createEmptyVault(), to: /storage/testTokenVault)
+          let receiverCap = signer.capabilities.storage.issue<&TestToken.Vault>(/storage/testTokenVault)
+          signer.capabilities.publish(receiverCap, at: /public/testTokenVault)
         }
-        let userTestTokenReceiver = signer.capabilities.get<&TestToken.Vault>(/public/TestTokenReceiver)
+        let userTestTokenReceiver = signer.capabilities.get<&TestToken.Vault>(/public/testTokenVault)
           .borrow()
           ?? panic("Could not borrow user's TestToken receiver")
         userTestTokenReceiver.deposit(from: <- testTokenToSend)
@@ -106,19 +106,19 @@ export const FLOW_TRANSACTIONS = {
   SWAP_TEST_TO_FLOW: `
     import FungibleToken from 0x9a0766d93b6608b7
     import FlowToken from 0x7e60df042a9c0868
-    import TestToken from 0xfbaa55ea2a76ff04
+    import TestToken from 0x0c0c904844c9a720
     
     transaction(amountIn: UFix64, minAmountOut: UFix64, contractAddr: Address) {
       prepare(signer: auth(Storage, Capabilities) &Account) {
-        let testTokenVault = signer.storage.borrow<auth(FungibleToken.Withdraw) &TestToken.Vault>(from: /storage/TestTokenVault)
+        let testTokenVault = signer.storage.borrow<auth(FungibleToken.Withdraw) &TestToken.Vault>(from: /storage/testTokenVault)
           ?? panic("Could not borrow user's TestToken Vault")
         let withdrawnTestToken <- testTokenVault.withdraw(amount: amountIn)
         let contractAccount = getAccount(contractAddr)
-        let contractTestTokenReceiver = contractAccount.capabilities.get<&TestToken.Vault>(/public/testTokenReceiver)
+        let contractTestTokenReceiver = contractAccount.capabilities.get<&TestToken.Vault>(/public/flowSwapTestReceiver)
           .borrow()
           ?? panic("Could not borrow contract's TestToken receiver")
         contractTestTokenReceiver.deposit(from: <- withdrawnTestToken)
-        let contractFlowVault = contractAccount.capabilities.get<auth(FungibleToken.Withdraw) &FlowToken.Vault>(/public/flowTokenVault)
+        let contractFlowVault = contractAccount.capabilities.get<auth(FungibleToken.Withdraw) &FlowToken.Vault>(/public/flowSwapFlowReceiver)
           .borrow()
           ?? panic("Could not borrow contract's FlowToken Vault")
         let flowToSend <- contractFlowVault.withdraw(amount: minAmountOut)
@@ -140,15 +140,15 @@ export const FLOW_TRANSACTIONS = {
     
     transaction() {
       prepare(signer: auth(Storage, Capabilities) &Account) {
-        if signer.storage.borrow<&TestToken.Vault>(from: /storage/TestTokenVault) == nil {
-          signer.storage.save(<- TestToken.createEmptyVault(), to: /storage/TestTokenVault)
+        if signer.storage.borrow<&TestToken.Vault>(from: /storage/testTokenVault) == nil {
+          signer.storage.save(<- TestToken.createEmptyVault(), to: /storage/testTokenVault)
           signer.capabilities.publish(
-            signer.capabilities.storage.issue<&TestToken.Vault>(/storage/TestTokenVault),
-            at: /public/TestTokenReceiver
+            signer.capabilities.storage.issue<&TestToken.Vault>(/storage/testTokenVault),
+            at: /public/testTokenVault
           )
           signer.capabilities.publish(
-            signer.capabilities.storage.issue<&TestToken.Vault>(/storage/TestTokenVault),
-            at: /public/TestTokenBalance
+            signer.capabilities.storage.issue<&TestToken.Vault>(/storage/testTokenVault),
+            at: /public/testTokenBalance
           )
         }
       }
