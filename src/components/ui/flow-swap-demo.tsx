@@ -282,8 +282,10 @@ function FlowSwapBox() {
       
       const amountOut = parseFloat(swapState.toAmount);
       // Use live price if available, otherwise use fallback prices
-      const price2 = livePrice ?? (swapState.toToken.symbol === "TEST" ? 1.5 : 0.67);
-      const amountIn2 = amountOut * price2;
+      // For reverse calculation, we need the inverse price
+      const basePrice = livePrice ?? (swapState.fromToken.symbol === "FLOW" ? 1.5 : 0.67);
+      const inversePrice = 1 / basePrice;
+      const amountIn2 = amountOut * inversePrice;
       
       setSwapState((p) => ({ ...p, fromAmount: amountIn2.toFixed(6) }));
     }
@@ -431,7 +433,15 @@ function FlowSwapBox() {
       return;
     }
     
-    let newValue = currentValue === 0 ? 1 : currentValue + 1;
+    // Daha küçük artışlar yap (0.1 veya 1)
+    let newValue;
+    if (currentValue === 0) {
+      newValue = 0.1; // 0'dan başlarken 0.1 ile başla
+    } else if (currentValue < 1) {
+      newValue = currentValue + 0.1; // 1'den küçük değerler için 0.1 artır
+    } else {
+      newValue = currentValue + 1; // 1 ve üzeri için 1 artır
+    }
     
     // Sadece from token için balance kontrolü yap
     if (tokenType === "from" && maxBalance > 0 && newValue > maxBalance) {
@@ -455,7 +465,7 @@ function FlowSwapBox() {
   const handleDecreaseAmount = (tokenType: "from" | "to") => {
     const currentAmountStr = tokenType === "from" ? swapState.fromAmount : swapState.toAmount;
     let currentValue = parseFloat(currentAmountStr);
-    if (isNaN(currentValue) || currentValue <= 1) {
+    if (isNaN(currentValue) || currentValue <= 0.1) {
       if (tokenType === "from") {
         setSwapState(prev => ({ ...prev, fromAmount: "" }));
         setLastEdited("from");
@@ -465,7 +475,15 @@ function FlowSwapBox() {
       }
       return;
     }
-    let newValue = currentValue - 1;
+    
+    // Daha küçük azalışlar yap (0.1 veya 1)
+    let newValue;
+    if (currentValue <= 1) {
+      newValue = currentValue - 0.1; // 1'den küçük değerler için 0.1 azalt
+    } else {
+      newValue = currentValue - 1; // 1 ve üzeri için 1 azalt
+    }
+    
     if (newValue < 0) newValue = 0;
     const newValueStr = newValue === 0 ? "" : newValue.toString();
     if (tokenType === "from") {
