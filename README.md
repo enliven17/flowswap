@@ -1,14 +1,45 @@
 # FlowSwap
 
-A decentralized token swap application built on the Flow blockchain, featuring real-time price feeds and seamless token trading between FLOW and FUSD.
+A decentralized token swap application built on the Flow blockchain, featuring real-time price feeds and seamless token trading between FLOW and TestToken (a custom fungible token for demo purposes).
 
 ## Features
 
 - **Real-time Price Feeds**: Live price updates via WebSocket connection
-- **FUSD Vault Management**: Automatic setup of FUSD vaults for new users
+- **TestToken Vault Management**: Automatic setup of TestToken vaults for new users
 - **Flow Blockchain Integration**: Native support for Flow testnet
 - **Modern UI**: Beautiful, responsive interface with animations
 - **Error Handling**: Graceful handling of connection issues and missing vaults
+
+## Smart Contracts
+
+### `contracts/FlowSwap.cdc`
+**Purpose:**
+A decentralized swap contract that allows users to swap between FLOW and TestToken. It manages liquidity pools, swap fees, and emits events for swaps and liquidity changes.
+
+**Key Features:**
+- Users can swap FLOW <-> TestToken with slippage protection
+- Liquidity providers can add/remove liquidity
+- Admin can set swap fees and manage the contract
+- All balances and reserves are managed on-chain
+
+### `contracts/TestToken.cdc`
+**Purpose:**
+A simple fungible token contract (Cadence) for demo and testing. Implements the Flow FungibleToken standard.
+
+**Key Features:**
+- Mintable and burnable by the contract admin
+- Users can create their own vaults to hold TestToken
+- Standard deposit/withdraw interface
+
+## Cadence Transaction & Script Files
+
+- `transactions/swap_flow_to_test.cdc`: Swaps FLOW for TestToken using the FlowSwap contract.
+- `transactions/add_liquidity_deployer.cdc`: Adds liquidity to the FlowSwap contract (admin or deployer only).
+- `transactions/setup_user_testtoken_vault.cdc`: Sets up a TestToken vault for a user if not already present.
+- `scripts/check-flow-balance-final.cdc`: Checks a user's FLOW token balance.
+- `scripts/check-testtoken-balance-final.cdc`: Checks a user's TestToken balance.
+
+**All other Cadence files in `transactions/` and `scripts/` are deprecated and have been removed for clarity.**
 
 ## Quick Start
 
@@ -31,38 +62,25 @@ cd flowswap
 npm install
 ```
 
-3. Start the development server with live price feed:
+3. Start the development server:
 ```bash
-npm run dev:full
+npm run dev -- --port 5190
 ```
 
-This will start both the Vite development server (port 5175) and the WebSocket price server (port 8081).
-
-### Alternative: Run Without Live Prices
-
-If you don't need live price feeds, you can run just the main application:
-```bash
-npm run dev
-```
+This will start the Vite development server (port 5190).
 
 ## Usage
 
 1. **Connect Wallet**: Click "Connect Wallet" to connect your Flow wallet
-2. **Setup FUSD Vault**: If you're trading FUSD for the first time, you'll need to set up your FUSD vault (one-time setup)
+2. **Setup TestToken Vault**: If you're trading TestToken for the first time, you'll need to set up your TestToken vault (one-time setup)
 3. **Select Tokens**: Choose the tokens you want to swap
 4. **Enter Amount**: Input the amount you want to swap
 5. **Execute Swap**: Click "Swap" to execute the transaction
 
 ## Troubleshooting
 
-### FUSD Balance Issues
-If you see "Could not borrow Vault reference" errors, this means your account doesn't have the FUSD vault set up. The application will automatically detect this and provide a "Setup FUSD Vault" button.
-
-### WebSocket Connection Issues
-If the live price feed isn't working:
-- Make sure the price server is running (`npm run price-server`)
-- Check that port 8081 is available
-- The application will fall back to static prices if the WebSocket connection fails
+### TestToken Balance Issues
+If you see "Could not borrow Vault reference" errors, this means your account doesn't have the TestToken vault set up. The application will automatically detect this and provide a "Setup TestToken Vault" button.
 
 ### Flow Network Issues
 - Ensure you're connected to Flow testnet
@@ -94,8 +112,106 @@ src/
 - `src/bindings/flow-bindings.ts` - Flow blockchain interactions
 - `src/config/flow.ts` - Flow network configuration
 - `src/hooks/useLivePrice.ts` - WebSocket price feed hook
-- `scripts/price-server.js` - WebSocket price server
 
 ## License
 
 MIT
+
+## Addresses & Vault Mechanism
+
+### Project Addresses
+
+- **FLOW Token Contract:** `0x9a0766d93b6608b7`
+- **TestToken Contract & FlowSwap Contract:** `0x0c0c904844c9a720`
+- **Swap Contract Address (Testnet):** `0x0c0c904844c9a720`
+
+### Vault Storage Paths
+
+- **FLOW Vault Storage Path:** `/storage/flowTokenVault`
+- **FLOW Vault Public Paths:** `/public/flowTokenReceiver`, `/public/flowTokenBalance`
+- **TestToken Vault Storage Path:** `/storage/testTokenVault`
+- **TestToken Vault Public Paths:** `/public/testTokenVault`, `/public/testTokenBalance`
+- **FlowSwap Contract Vaults:**
+  - **FLOW:** `/storage/flowSwapFlowVault` (public: `/public/flowSwapFlowReceiver`)
+  - **TestToken:** `/storage/flowSwapTestVault` (public: `/public/flowSwapTestReceiver`)
+
+---
+
+## How Vaults and Liquidity Work
+
+### Vaults
+
+- **Vaults** are secure storage resources for tokens in Flow. Each user must have a vault for each token they want to hold or trade.
+- When a user interacts with the dApp for the first time, the app checks if the user has a vault for TestToken. If not, it automatically creates one using the `setup_user_testtoken_vault.cdc` transaction.
+- Vaults expose public capabilities for deposit and balance queries, allowing contracts and other users to send tokens to your account.
+
+### Liquidity
+
+- **Liquidity** in FlowSwap is managed by the smart contract. The contract holds its own vaults for both FLOW and TestToken.
+- Liquidity providers (usually the admin or deployer) can add tokens to the contract's vaults using the `add_liquidity_deployer.cdc` transaction.
+- When a user swaps tokens, the contract withdraws from its own vaults to fulfill the swap, and updates its internal reserves.
+- The contract emits events for every liquidity addition, removal, and swap, making it easy to track on-chain activity.
+
+---
+
+## Example: Swap Flow
+
+1. **User wants to swap FLOW for TestToken:**
+   - User must have a FLOW vault (`/storage/flowTokenVault`) and a TestToken vault (`/storage/testTokenVault`).
+   - User calls the swap transaction, which:
+     - Withdraws FLOW from the user's vault.
+     - Deposits FLOW into the FlowSwap contract's vault.
+     - Withdraws TestToken from the contract's vault.
+     - Deposits TestToken into the user's vault.
+
+2. **Liquidity Provider adds liquidity:**
+   - Admin calls the add liquidity transaction.
+   - FLOW and TestToken are deposited into the contract's vaults.
+   - The contract's reserves are updated.
+
+---
+
+## User Vault Setup
+
+To use FlowSwap, users need to set up their token vaults. Here's how to do it:
+
+### Prerequisites
+- A Flow account with FLOW tokens
+- Flow CLI installed and configured
+
+### Setting up FLOW Token Vault
+```bash
+# Deploy FLOW token vault to your account
+flow transactions send cadence/transactions/setup_flow_vault.cdc
+
+# Verify vault setup
+flow scripts execute cadence/scripts/get_flow_balance.cdc 0xYOUR_ACCOUNT_ADDRESS
+```
+
+### Setting up TestToken Vault
+```bash
+# Deploy TestToken vault to your account
+flow transactions send cadence/transactions/setup_testtoken_vault.cdc
+
+# Verify vault setup
+flow scripts execute cadence/scripts/get_testtoken_balance.cdc 0xYOUR_ACCOUNT_ADDRESS
+```
+
+### Verifying Vault Setup
+After setting up both vaults, you can verify they're working correctly:
+```bash
+# Check FLOW balance
+flow scripts execute cadence/scripts/get_flow_balance.cdc 0xYOUR_ACCOUNT_ADDRESS
+
+# Check TestToken balance
+flow scripts execute cadence/scripts/get_testtoken_balance.cdc 0xYOUR_ACCOUNT_ADDRESS
+```
+
+### Important Notes
+- Make sure your account has sufficient FLOW tokens for transaction fees
+- The vault setup transactions only need to be run once per account
+- If you encounter any errors, ensure your account has the necessary capabilities and storage paths
+
+---
+
+💚 Built with love for the Flow ecosystem. 💧✨
