@@ -1,10 +1,17 @@
 import { useEffect, useState } from "react";
 
-export function useLivePrice(url: string = "ws://localhost:8081") {
+export function useLivePrice(url?: string) {
   const [price, setPrice] = useState<number | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
+    // In production, use fallback prices since WebSocket server won't be available
+    if (import.meta.env.PROD || !url) {
+      setPrice(1.5); // Fallback FLOW price
+      setIsConnected(false);
+      return;
+    }
+
     const ws = new WebSocket(url);
     
     ws.onopen = () => {

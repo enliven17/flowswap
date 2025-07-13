@@ -10,6 +10,15 @@ A decentralized token swap application built on the Flow blockchain, featuring r
 - **Modern UI**: Beautiful, responsive interface with animations
 - **Error Handling**: Graceful handling of connection issues and missing vaults
 
+## Live Price System
+
+The application includes a real-time price feed system that provides live USD values for token balances:
+
+- **WebSocket Connection**: Connects to `ws://localhost:8081` for live price updates
+- **Price Integration**: Automatically calculates USD values for FLOW and TestToken balances
+- **Fallback Handling**: Uses default prices when WebSocket connection is unavailable
+- **Real-time Updates**: Token balances display current USD values based on live market data
+
 ## Smart Contracts
 
 ### `contracts/FlowSwap.cdc`
@@ -214,4 +223,4 @@ flow scripts execute cadence/scripts/get_testtoken_balance.cdc 0xYOUR_ACCOUNT_AD
 
 ---
 
-💚 Built with love for the Flow ecosystem. 💧✨
+💚 Built with love for the Flow ecosystem. ⭐💧✨

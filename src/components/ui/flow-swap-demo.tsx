@@ -172,7 +172,7 @@ function FlowSwapBox() {
   // const [needsTestTokenVault, setNeedsTestTokenVault] = useState(false);
 
   // Fiyatı canlı olarak al
-  const { price: livePrice, isConnected: priceConnected } = useLivePrice();
+  const { price: livePrice, isConnected: priceConnected } = useLivePrice("ws://localhost:8081");
 
   // Flow wallet connection
   async function connect() {
@@ -740,6 +740,13 @@ function FlowSwapBox() {
             Connect Wallet
           </motion.button>
         )}
+        
+        {/* Testnet Notice */}
+        <div className="mt-4 text-center">
+          <span className="text-xs text-white/50 bg-white/10 px-3 py-1 rounded-full">
+            🧪 Running on Flow Testnet
+          </span>
+        </div>
         {/* Status Messages */}
         {swapState.status === "success" && (
           <motion.div
@@ -831,14 +838,10 @@ function FlowSwapDemo() {
         <div className="w-full flex flex-col items-center">
           <FlowSwapBox />
           {/* Logo under swap component */}
-          <a href="/" className="mt-8 block">
-            <img
-              src="/flowswap-logo.svg"
-              alt="FlowSwap Logo"
-              className="w-48 max-w-xs h-auto object-contain transition-transform hover:scale-105"
-              style={{ margin: '0 auto' }}
-            />
-          </a>
+          <div className="mt-8 flex items-center justify-center space-x-2">
+            <span className="text-4xl font-bold text-white">FlowSwap</span>
+            <span className="text-4xl animate-pulse">🌠</span>
+          </div>
         </div>
       </div>
     </div>
