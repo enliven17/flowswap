@@ -581,7 +581,7 @@ function FlowSwapBox() {
                   setSwapState(prev => ({ ...prev, fromAmount: value }));
                   setLastEdited("from");
                 }}
-                className="flex-1 text-right bg-transparent border-none text-base md:text-lg font-bold placeholder:text-white/30 focus:ring-0 focus:outline-none transition rounded-xl px-2 md:px-4 hide-number-spin overflow-x-auto whitespace-nowrap min-w-0 max-w-full"
+                className="flex-1 text-right bg-transparent border-none text-base md:text-lg font-bold text-white placeholder:text-white/30 focus:ring-0 focus:outline-none transition rounded-xl px-2 md:px-4 hide-number-spin overflow-x-auto whitespace-nowrap min-w-0 max-w-full"
               />
               <div className="flex flex-row gap-1 ml-1">
                 <button
@@ -655,7 +655,7 @@ function FlowSwapBox() {
                   setSwapState(prev => ({ ...prev, toAmount: value }));
                   setLastEdited("to");
                 }}
-                className="flex-1 text-right bg-transparent border-none text-base md:text-lg font-bold placeholder:text-white/30 focus:ring-0 focus:outline-none transition rounded-xl px-2 md:px-4 hide-number-spin overflow-x-auto whitespace-nowrap min-w-0 max-w-full"
+                className="flex-1 text-right bg-transparent border-none text-base md:text-lg font-bold text-white placeholder:text-white/30 focus:ring-0 focus:outline-none transition rounded-xl px-2 md:px-4 hide-number-spin overflow-x-auto whitespace-nowrap min-w-0 max-w-full"
               />
               <div className="flex flex-row gap-1 ml-1">
                 <button
