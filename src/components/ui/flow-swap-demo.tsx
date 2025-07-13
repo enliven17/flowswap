@@ -307,8 +307,8 @@ function FlowSwapBox() {
       ...prev,
       fromToken: prev.toToken,
       toToken: prev.fromToken,
-      fromAmount: prev.toAmount,
-      toAmount: prev.fromAmount
+      fromAmount: "",
+      toAmount: ""
     }));
   };
 
@@ -427,29 +427,17 @@ function FlowSwapBox() {
     if (isNaN(currentValue) || currentValue < 0) currentValue = 0;
     const balance = tokenType === "from" ? swapState.fromToken.balance : swapState.toToken.balance;
     const maxBalance = parseFloat(balance.toString());
-    
+
     // Eğer current value zaten max balance'a eşit veya büyükse, hiçbir şey yapma
     if (tokenType === "from" && currentValue >= maxBalance && maxBalance > 0) {
       return;
     }
-    
-    // Daha küçük artışlar yap (0.1 veya 1)
-    let newValue;
-    if (currentValue === 0) {
-      newValue = 0.1; // 0'dan başlarken 0.1 ile başla
-    } else if (currentValue < 1) {
-      newValue = currentValue + 0.1; // 1'den küçük değerler için 0.1 artır
-    } else {
-      newValue = currentValue + 1; // 1 ve üzeri için 1 artır
-    }
-    
-    // Sadece from token için balance kontrolü yap
+
+    let newValue = currentValue + 1;
     if (tokenType === "from" && maxBalance > 0 && newValue > maxBalance) {
       newValue = maxBalance;
     }
-    
     const newValueStr = newValue.toString();
-    
     if (tokenType === "from") {
       setSwapState(prev => ({ ...prev, fromAmount: newValueStr }));
       setLastEdited("from");
@@ -465,7 +453,7 @@ function FlowSwapBox() {
   const handleDecreaseAmount = (tokenType: "from" | "to") => {
     const currentAmountStr = tokenType === "from" ? swapState.fromAmount : swapState.toAmount;
     let currentValue = parseFloat(currentAmountStr);
-    if (isNaN(currentValue) || currentValue <= 0.1) {
+    if (isNaN(currentValue) || currentValue <= 1) {
       if (tokenType === "from") {
         setSwapState(prev => ({ ...prev, fromAmount: "" }));
         setLastEdited("from");
@@ -475,15 +463,7 @@ function FlowSwapBox() {
       }
       return;
     }
-    
-    // Daha küçük azalışlar yap (0.1 veya 1)
-    let newValue;
-    if (currentValue <= 1) {
-      newValue = currentValue - 0.1; // 1'den küçük değerler için 0.1 azalt
-    } else {
-      newValue = currentValue - 1; // 1 ve üzeri için 1 azalt
-    }
-    
+    let newValue = currentValue - 1;
     if (newValue < 0) newValue = 0;
     const newValueStr = newValue === 0 ? "" : newValue.toString();
     if (tokenType === "from") {
@@ -510,6 +490,16 @@ function FlowSwapBox() {
     const usdValue = numBalance * price;
     return `$${usdValue.toFixed(2)}`;
   };
+
+  // Kısa sayı formatlama fonksiyonu
+  function formatShortNumber(value: string | number): string {
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(num)) return '';
+    if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+    if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+    if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
+    return num.toFixed(2);
+  }
 
   const shouldReduceMotion = useReducedMotion();
 
@@ -585,14 +575,13 @@ function FlowSwapBox() {
                 type="text"
                 inputMode="decimal"
                 placeholder="0.0"
-                value={swapState.fromAmount ? Number(swapState.fromAmount).toFixed(2) : ""}
+                value={swapState.fromAmount ? formatShortNumber(swapState.fromAmount) : ""}
                 onChange={(e) => {
-                  // Sadece sayı ve nokta izin ver
                   const value = e.target.value.replace(/[^0-9.]/g, "");
                   setSwapState(prev => ({ ...prev, fromAmount: value }));
                   setLastEdited("from");
                 }}
-                className="flex-1 text-right bg-transparent border-none text-white text-2xl font-bold placeholder:text-white/30 focus:ring-0 focus:outline-none transition rounded-xl px-4 md:px-6 hide-number-spin"
+                className="flex-1 text-right bg-transparent border-none text-white text-2xl md:text-xl font-bold placeholder:text-white/30 focus:ring-0 focus:outline-none transition rounded-xl px-4 md:px-6 hide-number-spin overflow-x-auto min-w-0 max-w-full"
               />
               <div className="flex flex-row gap-1 ml-1">
                 <button
@@ -660,13 +649,13 @@ function FlowSwapBox() {
                 type="text"
                 inputMode="decimal"
                 placeholder="0.0"
-                value={swapState.toAmount ? Number(swapState.toAmount).toFixed(2) : ""}
+                value={swapState.toAmount ? formatShortNumber(swapState.toAmount) : ""}
                 onChange={(e) => {
                   const value = e.target.value.replace(/[^0-9.]/g, "");
                   setSwapState(prev => ({ ...prev, toAmount: value }));
                   setLastEdited("to");
                 }}
-                className="flex-1 text-right bg-transparent border-none text-white text-2xl font-bold placeholder:text-white/30 focus:ring-0 focus:outline-none transition rounded-xl px-4 md:px-6 hide-number-spin"
+                className="flex-1 text-right bg-transparent border-none text-white text-2xl md:text-xl font-bold placeholder:text-white/30 focus:ring-0 focus:outline-none transition rounded-xl px-4 md:px-6 hide-number-spin overflow-x-auto min-w-0 max-w-full"
               />
               <div className="flex flex-row gap-1 ml-1">
                 <button
