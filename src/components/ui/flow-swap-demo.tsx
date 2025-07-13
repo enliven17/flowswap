@@ -569,7 +569,7 @@ function FlowSwapBox() {
               <span className="text-base font-semibold">{swapState.fromToken.symbol}</span>
               <ChevronDown className="h-4 w-4" />
             </Button>
-            <div className="flex-1 flex items-center gap-2">
+            <div className="flex-1 flex items-center gap-2 min-w-[100px] max-w-[160px]">
               <Input
                 ref={fromInputRef}
                 type="text"
@@ -581,7 +581,7 @@ function FlowSwapBox() {
                   setSwapState(prev => ({ ...prev, fromAmount: value }));
                   setLastEdited("from");
                 }}
-                className="flex-1 text-right bg-transparent border-none text-white text-2xl md:text-xl font-bold placeholder:text-white/30 focus:ring-0 focus:outline-none transition rounded-xl px-4 md:px-6 hide-number-spin overflow-x-auto min-w-0 max-w-full"
+                className="flex-1 text-right bg-transparent border-none text-base md:text-lg font-bold placeholder:text-white/30 focus:ring-0 focus:outline-none transition rounded-xl px-2 md:px-4 hide-number-spin overflow-x-auto whitespace-nowrap min-w-0 max-w-full"
               />
               <div className="flex flex-row gap-1 ml-1">
                 <button
@@ -643,7 +643,7 @@ function FlowSwapBox() {
               <span className="text-base font-semibold">{swapState.toToken.symbol}</span>
               <ChevronDown className="h-4 w-4" />
             </Button>
-            <div className="flex-1 flex items-center gap-2">
+            <div className="flex-1 flex items-center gap-2 min-w-[100px] max-w-[160px]">
               <Input
                 ref={toInputRef}
                 type="text"
@@ -655,7 +655,7 @@ function FlowSwapBox() {
                   setSwapState(prev => ({ ...prev, toAmount: value }));
                   setLastEdited("to");
                 }}
-                className="flex-1 text-right bg-transparent border-none text-white text-2xl md:text-xl font-bold placeholder:text-white/30 focus:ring-0 focus:outline-none transition rounded-xl px-4 md:px-6 hide-number-spin overflow-x-auto min-w-0 max-w-full"
+                className="flex-1 text-right bg-transparent border-none text-base md:text-lg font-bold placeholder:text-white/30 focus:ring-0 focus:outline-none transition rounded-xl px-2 md:px-4 hide-number-spin overflow-x-auto whitespace-nowrap min-w-0 max-w-full"
               />
               <div className="flex flex-row gap-1 ml-1">
                 <button
