@@ -118,6 +118,8 @@ src/
 
 ### Key Files
 
+https://github.com/onflow/rewtf-registry
+
 - `src/bindings/flow-bindings.ts` - Flow blockchain interactions
 - `src/config/flow.ts` - Flow network configuration
 - `src/hooks/useLivePrice.ts` - WebSocket price feed hook
