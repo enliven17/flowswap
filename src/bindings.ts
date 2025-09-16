@@ -27,7 +27,7 @@ export * as contract from '@stellar/stellar-sdk/contract'
 export * as rpc from '@stellar/stellar-sdk/rpc'
 */
 if (typeof window !== 'undefined') {
-  //@ts-ignore Buffer exists
+  //@ts-expect-error Buffer exists
   window.Buffer = window.Buffer || Buffer;
 }
 
@@ -144,7 +144,7 @@ export interface TokenMetadata {
   symbol: string;
 }
 
-export interface Client {
+export interface ClientApi {
   /**
    * Construct and simulate a init transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    */

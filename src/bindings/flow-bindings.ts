@@ -6,6 +6,13 @@ import type { FlowToken } from "@/types/tokens";
 export class FlowSwapClient {
   private config: typeof FLOW_CONFIG;
 
+  // Helper types to avoid `any` when building Cadence args with FCL
+  private static readonly cadenceTypes: { Address?: unknown; UFix64?: unknown } = {};
+  private static argBuilder(value: unknown, cadenceType: unknown): unknown {
+    // This function exists purely for typing clarity when passed into FCL's args callback
+    return { value, cadenceType } as unknown;
+  }
+
   constructor() {
     this.config = FLOW_CONFIG;
   }
@@ -15,7 +22,9 @@ export class FlowSwapClient {
     try {
       const result = await query({
         cadence: FLOW_TRANSACTIONS.GET_BALANCE,
-        args: (arg: any, t: any) => [arg(address, t.Address)]
+        args: (arg: typeof FlowSwapClient.argBuilder, t: typeof FlowSwapClient.cadenceTypes) => [
+          arg(address, t.Address as unknown)
+        ]
       });
       return parseFloat(result);
     } catch (error) {
@@ -29,7 +38,9 @@ export class FlowSwapClient {
     try {
       const result = await query({
         cadence: FLOW_TRANSACTIONS.GET_TEST_TOKEN_BALANCE,
-        args: (arg: any, t: any) => [arg(address, t.Address)]
+        args: (arg: typeof FlowSwapClient.argBuilder, t: typeof FlowSwapClient.cadenceTypes) => [
+          arg(address, t.Address as unknown)
+        ]
       });
       return parseFloat(result);
     } catch (error) {
@@ -48,7 +59,7 @@ export class FlowSwapClient {
     try {
       const result = await mutate({
         cadence: FLOW_TRANSACTIONS.SETUP_TEST_TOKEN_VAULT,
-        args: (arg: any, t: any) => []
+        args: (_arg: typeof FlowSwapClient.argBuilder, _t: typeof FlowSwapClient.cadenceTypes) => []
       });
       return result;
     } catch (error) {
@@ -70,7 +81,9 @@ export class FlowSwapClient {
             return vaultCap.check()
           }
         `,
-        args: (arg: any, t: any) => [arg(address, t.Address)]
+        args: (arg: typeof FlowSwapClient.argBuilder, t: typeof FlowSwapClient.cadenceTypes) => [
+          arg(address, t.Address as unknown)
+        ]
       });
       return result === true;
     } catch (error) {
@@ -102,10 +115,10 @@ export class FlowSwapClient {
     try {
       const result = await mutate({
         cadence: FLOW_TRANSACTIONS.SWAP_FLOW_TO_TEST,
-        args: (arg: any, t: any) => [
-          arg(amountIn.toFixed(8), t.UFix64),
-          arg(minAmountOut.toFixed(8), t.UFix64),
-          arg(this.config.SWAP_CONTRACT, t.Address)
+        args: (arg: typeof FlowSwapClient.argBuilder, t: typeof FlowSwapClient.cadenceTypes) => [
+          arg(amountIn.toFixed(8), t.UFix64 as unknown),
+          arg(minAmountOut.toFixed(8), t.UFix64 as unknown),
+          arg(this.config.SWAP_CONTRACT, t.Address as unknown)
         ]
       });
       return result;
@@ -120,10 +133,10 @@ export class FlowSwapClient {
     try {
       const result = await mutate({
         cadence: FLOW_TRANSACTIONS.SWAP_TEST_TO_FLOW,
-        args: (arg: any, t: any) => [
-          arg(amountIn.toFixed(8), t.UFix64),
-          arg(minAmountOut.toFixed(8), t.UFix64),
-          arg(this.config.SWAP_CONTRACT, t.Address)
+        args: (arg: typeof FlowSwapClient.argBuilder, t: typeof FlowSwapClient.cadenceTypes) => [
+          arg(amountIn.toFixed(8), t.UFix64 as unknown),
+          arg(minAmountOut.toFixed(8), t.UFix64 as unknown),
+          arg(this.config.SWAP_CONTRACT, t.Address as unknown)
         ]
       });
       return result;
@@ -146,9 +159,9 @@ export class FlowSwapClient {
       
       const result = await mutate({
         cadence,
-        args: (arg: any, t: any) => [
-          arg(recipient, t.Address),
-          arg(amount.toFixed(8), t.UFix64)
+        args: (arg: typeof FlowSwapClient.argBuilder, t: typeof FlowSwapClient.cadenceTypes) => [
+          arg(recipient, t.Address as unknown),
+          arg(amount.toFixed(8), t.UFix64 as unknown)
         ]
       });
       return result;

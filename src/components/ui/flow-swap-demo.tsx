@@ -144,7 +144,7 @@ function useClickOutside<T extends HTMLElement = HTMLElement>(
 }
 
 function FlowSwapBox() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ addr?: string } | null>(null);
   const [lastEdited, setLastEdited] = useState<"from" | "to">("from");
   const [showTokenSelector, setShowTokenSelector] = useState(false);
   const [selectedTokenType, setSelectedTokenType] = useState<"from" | "to">("from");
@@ -155,7 +155,7 @@ function FlowSwapBox() {
   // Flow client instance
   const flowClient = useMemo(() => {
     return new FlowSwapClient();
-  }, [user?.addr]);
+  }, []);
 
   // State management
   const [tokensLive, setTokensLive] = useState<FlowToken[]>(defaultTokens);
@@ -423,21 +423,17 @@ function FlowSwapBox() {
   // Miktar artirma fonksiyonu
   const handleIncreaseAmount = (tokenType: "from" | "to") => {
     const currentAmountStr = tokenType === "from" ? swapState.fromAmount : swapState.toAmount;
-    let currentValue = parseFloat(currentAmountStr);
-    if (isNaN(currentValue) || currentValue < 0) currentValue = 0;
+    const parsed = parseFloat(currentAmountStr);
+    const safeCurrent = isNaN(parsed) || parsed < 0 ? 0 : parsed;
     const balance = tokenType === "from" ? swapState.fromToken.balance : swapState.toToken.balance;
     const maxBalance = parseFloat(balance.toString());
 
-    // Eğer current value zaten max balance'a eşit veya büyükse, hiçbir şey yapma
-    if (tokenType === "from" && currentValue >= maxBalance && maxBalance > 0) {
+    if (tokenType === "from" && safeCurrent >= maxBalance && maxBalance > 0) {
       return;
     }
 
-    let newValue = currentValue + 1;
-    if (tokenType === "from" && maxBalance > 0 && newValue > maxBalance) {
-      newValue = maxBalance;
-    }
-    const newValueStr = newValue.toString();
+    const capped = tokenType === "from" && maxBalance > 0 ? Math.min(safeCurrent + 1, maxBalance) : safeCurrent + 1;
+    const newValueStr = capped.toString();
     if (tokenType === "from") {
       setSwapState(prev => ({ ...prev, fromAmount: newValueStr }));
       setLastEdited("from");
@@ -452,8 +448,9 @@ function FlowSwapBox() {
   // Miktar azaltma fonksiyonu
   const handleDecreaseAmount = (tokenType: "from" | "to") => {
     const currentAmountStr = tokenType === "from" ? swapState.fromAmount : swapState.toAmount;
-    let currentValue = parseFloat(currentAmountStr);
-    if (isNaN(currentValue) || currentValue <= 1) {
+    const parsed = parseFloat(currentAmountStr);
+    const safeCurrent = isNaN(parsed) ? 0 : parsed;
+    if (safeCurrent <= 1) {
       if (tokenType === "from") {
         setSwapState(prev => ({ ...prev, fromAmount: "" }));
         setLastEdited("from");
@@ -463,9 +460,8 @@ function FlowSwapBox() {
       }
       return;
     }
-    let newValue = currentValue - 1;
-    if (newValue < 0) newValue = 0;
-    const newValueStr = newValue === 0 ? "" : newValue.toString();
+    const decreased = Math.max(0, safeCurrent - 1);
+    const newValueStr = decreased === 0 ? "" : decreased.toString();
     if (tokenType === "from") {
       setSwapState(prev => ({ ...prev, fromAmount: newValueStr }));
       setLastEdited("from");
