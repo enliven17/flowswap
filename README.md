@@ -1,6 +1,22 @@
 # FlowSwap
 
-A decentralized token swap application built on the Flow blockchain, featuring real-time price feeds and seamless token trading between FLOW and TestToken (a custom fungible token for demo purposes).
+A decentralized token swap application **built on the Flow blockchain**, featuring real-time price feeds and seamless token trading between FLOW and TestToken (a custom fungible token for demo purposes).
+
+## 🌊 Built on Flow Blockchain
+
+This project is built on the **Flow blockchain** using:
+- **Cadence smart contracts** for secure token swapping
+- **@onflow/fcl** for blockchain interactions
+- **Flow testnet** for deployment and testing
+- **Flow wallet integration** for user authentication
+
+### Deployed Contract Addresses on Flow Testnet:
+- **FlowSwap Contract**: `0x0c0c904844c9a720`
+- **TestToken Contract**: `0x0c0c904844c9a720`
+- **FLOW Token Contract**: `0x9a0766d93b6608b7`
+
+[![ReWTF](https://img.shields.io/badge/ReWTF-Participant-blue?style=for-the-badge&logo=flow&logoColor=white)](https://github.com/onflow/rewtf-registry)
+[![Flow](https://img.shields.io/badge/Built%20on-Flow-00EF8B?style=for-the-badge&logo=flow&logoColor=white)](https://flow.com)
 
 ## Features
 
@@ -225,4 +241,17 @@ flow scripts execute cadence/scripts/get_testtoken_balance.cdc 0xYOUR_ACCOUNT_AD
 
 ---
 
-💚 Built with love for the Flow ecosystem. ⭐💧✨
+## 🏆 ReWTF Program
+
+This project is participating in the **ReWTF (Reward The Flow)** program! 
+
+ReWTF rewards developers building on Flow with:
+- 10k+ $FLOW rewards for active builders
+- Points redeemable for MacBook Pros, AirPods, and digital collectibles
+- Recognition for building in public
+
+Learn more about ReWTF: [https://github.com/onflow/rewtf-registry](https://github.com/onflow/rewtf-registry)
+
+---
+
+💚 Built with love for the Flow ecosystem. ⭐💧✨ #ReWTF #FlowBlockchain

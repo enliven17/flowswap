@@ -13,7 +13,9 @@
     "deploy:test-token": "node scripts/deploy-test-token.cjs",
     "deploy:testtoken": "./scripts/deploy-testtoken.sh",
     "deploy:full": "./scripts/deploy-testtoken.sh && echo '✅ TestToken deployed! Now deploy FlowSwap...'",
-    "price-server": "node scripts/price-server.js"
+    "price-server": "node scripts/price-server.js",
+    "rewtf:commit": "node scripts/rewtf-commit.js",
+    "rewtf:status": "echo '🏆 REWTF Status: https://app.databox.com/datawall/fc5f1f7de13471eac8bd5eb2e3d90a752817ac68a86fd6'"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
