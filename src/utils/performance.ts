@@ -30,18 +30,16 @@ export class PerformanceMonitor {
     return duration;
   }
 
-  measureAsync<T>(label: string, fn: () => Promise<T>): Promise<T> {
-    return new Promise(async (resolve, reject) => {
-      this.startTimer(label);
-      try {
-        const result = await fn();
-        this.endTimer(label);
-        resolve(result);
-      } catch (error) {
-        this.endTimer(label);
-        reject(error);
-      }
-    });
+  async measureAsync<T>(label: string, fn: () => Promise<T>): Promise<T> {
+    this.startTimer(label);
+    try {
+      const result = await fn();
+      this.endTimer(label);
+      return result;
+    } catch (error) {
+      this.endTimer(label);
+      throw error;
+    }
   }
 
   measure<T>(label: string, fn: () => T): T {
@@ -58,7 +56,7 @@ export class PerformanceMonitor {
 
   getMemoryUsage(): MemoryInfo | null {
     if ('memory' in performance) {
-      return (performance as any).memory;
+      return (performance as { memory: MemoryInfo }).memory;
     }
     return null;
   }
