@@ -13,6 +13,7 @@ import {
   ArrowDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import GlassNavbar from './glass-navbar';
 
 
 // Flow imports
@@ -823,6 +824,14 @@ function FlowSwapBox() {
 }
 
 function FlowSwapDemo() {
+  const [activeNavItem, setActiveNavItem] = useState('swap');
+
+  const handleNavItemClick = (itemId: string) => {
+    setActiveNavItem(itemId);
+    // Burada farklı sayfalar arasında geçiş yapabilirsiniz
+    console.log('Nav item clicked:', itemId);
+  };
+
   return (
     <div className="flex w-full flex-col min-h-screen bg-black relative">
       {/* Animated background at z-0 */}
@@ -839,12 +848,15 @@ function FlowSwapDemo() {
       {/* Main content at z-10 */}
       <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
         <div className="w-full flex flex-col items-center">
-          <FlowSwapBox />
-          {/* Logo under swap component */}
-          <div className="mt-8 flex items-center justify-center space-x-2">
-            <span className="text-4xl font-bold text-white">FlowSwap</span>
-            <span className="text-4xl animate-pulse">🌠</span>
+          {/* Glass Navbar */}
+          <div className="mb-8">
+            <GlassNavbar 
+              activeItem={activeNavItem}
+              onItemClick={handleNavItemClick}
+            />
           </div>
+          
+          <FlowSwapBox />
         </div>
       </div>
     </div>
