@@ -3,12 +3,12 @@ import { config } from "@onflow/fcl";
 // Flow Testnet Configuration
 export const FLOW_CONFIG = {
   // Testnet RPC endpoints
-  ACCESS_NODE: "https://rest-testnet.onflow.org",
-  WALLET_DISCOVERY: "https://fcl-discovery.onflow.org/testnet/authn",
+  ACCESS_NODE: import.meta.env.VITE_FLOW_ACCESS_NODE || "https://rest-testnet.onflow.org",
+  WALLET_DISCOVERY: import.meta.env.VITE_FLOW_WALLET_DISCOVERY || "https://fcl-discovery.onflow.org/testnet/authn",
   
   // Testnet contract addresses
-  FLOW_TOKEN: "0x9a0766d93b6608b7",
-  TEST_TOKEN: "0x0c0c904844c9a720",  // Latest TestToken address
+  FLOW_TOKEN: import.meta.env.VITE_FLOW_TOKEN_ADDRESS || "0x9a0766d93b6608b7",
+  TEST_TOKEN: import.meta.env.VITE_TEST_TOKEN_ADDRESS || "0x0c0c904844c9a720",  // Latest TestToken address
   
   // Testnet token configurations
   TOKENS: {
@@ -16,7 +16,7 @@ export const FLOW_CONFIG = {
       name: "Flow",
       symbol: "FLOW",
       decimals: 8,
-      address: "0x9a0766d93b6608b7",
+      address: import.meta.env.VITE_FLOW_TOKEN_ADDRESS || "0x9a0766d93b6608b7",
       logo: "/flow.svg",
       description: "Native Flow token"
     },
@@ -24,14 +24,14 @@ export const FLOW_CONFIG = {
       name: "Test Token", 
       symbol: "TEST", 
       decimals: 8, 
-      address: "0x0c0c904844c9a720", 
+      address: import.meta.env.VITE_TEST_TOKEN_ADDRESS || "0x0c0c904844c9a720", 
       logo: "/test-token.svg", 
       description: "Test token for FlowSwap" 
     }
   },
   
   // Swap contract (placeholder - you'll need to deploy your own)
-  SWAP_CONTRACT: "0x0c0c904844c9a720", // Latest contract address
+  SWAP_CONTRACT: import.meta.env.VITE_FLOW_SWAP_ADDRESS || "0x0c0c904844c9a720", // Latest contract address
   
   // Network configuration
   NETWORK: "testnet",

@@ -87,7 +87,13 @@ cd flowswap
 npm install
 ```
 
-3. Start the development server:
+3. Setup environment variables:
+```bash
+cp .env.example .env
+# Edit .env file with your configuration if needed
+```
+
+4. Start the development server:
 ```bash
 npm run dev -- --port 5190
 ```
@@ -111,6 +117,27 @@ If you see "Could not borrow Vault reference" errors, this means your account do
 - Ensure you're connected to Flow testnet
 - Check that your wallet has sufficient FLOW tokens for gas fees
 - Verify that the contract addresses in `src/config/flow.ts` are correct for your network
+
+## Environment Variables
+
+The application uses environment variables for configuration. Copy `.env.example` to `.env` and modify as needed:
+
+```bash
+# Flow Configuration
+VITE_FLOW_ACCESS_NODE=https://rest-testnet.onflow.org
+VITE_FLOW_WALLET_DISCOVERY=https://fcl-discovery.onflow.org/testnet/authn
+
+# Flow Contract Addresses (Testnet)
+VITE_FLOW_TOKEN_ADDRESS=0x9a0766d93b6608b7
+VITE_FUNGIBLE_TOKEN_ADDRESS=0xf233dcee88fe0abe
+VITE_TEST_TOKEN_ADDRESS=0x0c0c904844c9a720
+VITE_FLOW_SWAP_ADDRESS=0x0c0c904844c9a720
+
+# WebSocket Price Server
+VITE_PRICE_SERVER_URL=ws://localhost:8081
+```
+
+**Note**: The `.env` file is gitignored for security. Use `.env.example` as a template.
 
 ## Development
 

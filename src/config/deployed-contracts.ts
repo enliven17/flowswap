@@ -1,9 +1,9 @@
 // Deployed Contract Addresses
 export const DEPLOYED_CONTRACTS = {
   testnet: {
-    TestToken: "0x0c0c904844c9a720", // Latest TestToken address
-    FlowSwap: "0x0c0c904844c9a720", // Latest FlowSwap contract address
-    FungibleToken: "0xf233dcee88fe0abe", // Testnet FungibleToken
+    TestToken: import.meta.env.VITE_TEST_TOKEN_ADDRESS || "0x0c0c904844c9a720", // Latest TestToken address
+    FlowSwap: import.meta.env.VITE_FLOW_SWAP_ADDRESS || "0x0c0c904844c9a720", // Latest FlowSwap contract address
+    FungibleToken: import.meta.env.VITE_FUNGIBLE_TOKEN_ADDRESS || "0xf233dcee88fe0abe", // Testnet FungibleToken
   },
   mainnet: {
     TestToken: "", // Mainnet'e deploy edilecek
@@ -22,7 +22,7 @@ export const CONTRACT_IMPORTS = {
 
 // Contract Interaction Functions
 export const TestTokenConfig = {
-  contractAddress: "0x0c0c904844c9a720",
+  contractAddress: import.meta.env.VITE_TEST_TOKEN_ADDRESS || "0x0c0c904844c9a720",
   contractName: "TestToken",
   
   // Storage Paths
