@@ -37,23 +37,23 @@ export function useResponsive(breakpoints: BreakpointConfig = defaultBreakpoints
   const isMobile = windowSize.width < breakpoints.md;
   const isTablet = windowSize.width >= breakpoints.md && windowSize.width < breakpoints.lg;
   const isDesktop = windowSize.width >= breakpoints.lg;
+  const isLargeDesktop = windowSize.width >= breakpoints.xl;
 
-  const isSmallScreen = windowSize.width < breakpoints.sm;
-  const isMediumScreen = windowSize.width >= breakpoints.sm && windowSize.width < breakpoints.md;
-  const isLargeScreen = windowSize.width >= breakpoints.md && windowSize.width < breakpoints.lg;
-  const isExtraLargeScreen = windowSize.width >= breakpoints.lg && windowSize.width < breakpoints.xl;
-  const is2ExtraLargeScreen = windowSize.width >= breakpoints.xl;
+  const breakpoint = (() => {
+    if (windowSize.width >= breakpoints['2xl']) return '2xl';
+    if (windowSize.width >= breakpoints.xl) return 'xl';
+    if (windowSize.width >= breakpoints.lg) return 'lg';
+    if (windowSize.width >= breakpoints.md) return 'md';
+    return 'sm';
+  })();
 
   return {
     windowSize,
     isMobile,
     isTablet,
     isDesktop,
-    isSmallScreen,
-    isMediumScreen,
-    isLargeScreen,
-    isExtraLargeScreen,
-    is2ExtraLargeScreen,
-    breakpoints,
+    isLargeDesktop,
+    breakpoint,
+    isBreakpoint: (bp: keyof BreakpointConfig) => windowSize.width >= breakpoints[bp],
   };
 }

@@ -27,8 +27,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
 export async function readFromClipboard(): Promise<string | null> {
   try {
     if (navigator.clipboard && window.isSecureContext) {
-      const text = await navigator.clipboard.readText();
-      return text;
+      return await navigator.clipboard.readText();
     }
     return null;
   } catch (error) {
@@ -39,5 +38,5 @@ export async function readFromClipboard(): Promise<string | null> {
 
 export function isClipboardSupported(): boolean {
   return !!(navigator.clipboard && window.isSecureContext) || 
-         document.queryCommandSupported?.('copy') === true;
+         document.queryCommandSupported?.('copy');
 }
