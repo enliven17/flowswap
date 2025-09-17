@@ -9,17 +9,11 @@ import {
   Info 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-interface NavItem {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  active?: boolean;
-}
+import { NavItem, NavItemId } from '@/types/navigation';
 
 interface GlassNavbarProps {
-  activeItem?: string;
-  onItemClick?: (itemId: string) => void;
+  activeItem?: NavItemId;
+  onItemClick?: (itemId: NavItemId) => void;
   className?: string;
 }
 
