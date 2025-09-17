@@ -13,16 +13,24 @@ export interface LogEntry {
 }
 
 class Logger {
-  private level: LogLevel;
+  private static instance: Logger;
+  private logLevel: LogLevel = LogLevel.INFO;
   private logs: LogEntry[] = [];
   private maxLogs = 1000;
 
-  constructor(level: LogLevel = LogLevel.INFO) {
-    this.level = level;
+  static getInstance(): Logger {
+    if (!Logger.instance) {
+      Logger.instance = new Logger();
+    }
+    return Logger.instance;
   }
 
-  private log(level: LogLevel, message: string, context?: Record<string, unknown>) {
-    if (level < this.level) return;
+  setLogLevel(level: LogLevel): void {
+    this.logLevel = level;
+  }
+
+  private log(level: LogLevel, message: string, context?: Record<string, unknown>): void {
+    if (level < this.logLevel) return;
 
     const entry: LogEntry = {
       level,
@@ -32,48 +40,45 @@ class Logger {
     };
 
     this.logs.push(entry);
-    
-    // Keep only the last maxLogs entries
     if (this.logs.length > this.maxLogs) {
-      this.logs = this.logs.slice(-this.maxLogs);
+      this.logs.shift();
     }
 
-    // Console output in development
     if (process.env.NODE_ENV === 'development') {
       const levelName = LogLevel[level];
       const timestamp = entry.timestamp.toISOString();
-      const contextStr = context ? ` ${JSON.stringify(context)}` : '';
+      const contextStr = context ? JSON.stringify(context, null, 2) : '';
       
       switch (level) {
         case LogLevel.DEBUG:
-          console.debug(`[${timestamp}] DEBUG: ${message}${contextStr}`);
+          console.debug(`[${timestamp}] DEBUG: ${message}`, contextStr);
           break;
         case LogLevel.INFO:
-          console.info(`[${timestamp}] INFO: ${message}${contextStr}`);
+          console.info(`[${timestamp}] INFO: ${message}`, contextStr);
           break;
         case LogLevel.WARN:
-          console.warn(`[${timestamp}] WARN: ${message}${contextStr}`);
+          console.warn(`[${timestamp}] WARN: ${message}`, contextStr);
           break;
         case LogLevel.ERROR:
-          console.error(`[${timestamp}] ERROR: ${message}${contextStr}`);
+          console.error(`[${timestamp}] ERROR: ${message}`, contextStr);
           break;
       }
     }
   }
 
-  debug(message: string, context?: Record<string, unknown>) {
+  debug(message: string, context?: Record<string, unknown>): void {
     this.log(LogLevel.DEBUG, message, context);
   }
 
-  info(message: string, context?: Record<string, unknown>) {
+  info(message: string, context?: Record<string, unknown>): void {
     this.log(LogLevel.INFO, message, context);
   }
 
-  warn(message: string, context?: Record<string, unknown>) {
+  warn(message: string, context?: Record<string, unknown>): void {
     this.log(LogLevel.WARN, message, context);
   }
 
-  error(message: string, context?: Record<string, unknown>) {
+  error(message: string, context?: Record<string, unknown>): void {
     this.log(LogLevel.ERROR, message, context);
   }
 
@@ -81,15 +86,9 @@ class Logger {
     return [...this.logs];
   }
 
-  clearLogs() {
+  clearLogs(): void {
     this.logs = [];
-  }
-
-  setLevel(level: LogLevel) {
-    this.level = level;
   }
 }
 
-export const logger = new Logger(
-  process.env.NODE_ENV === 'development' ? LogLevel.DEBUG : LogLevel.INFO
-);
+export const logger = Logger.getInstance();
