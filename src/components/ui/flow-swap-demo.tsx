@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import GlassNavbar from './glass-navbar';
+import { formatNumber, formatUSD, formatShortNumber } from '@/utils/format';
 
 
 // Flow imports
@@ -549,7 +550,7 @@ function FlowSwapBox() {
           <div className="flex items-center justify-between mb-1">
             <Label className="text-white/80 text-sm">From</Label>
             <span className="text-xs text-white/60">
-              Balance: {formatBalance(swapState.fromToken.balance)}
+              Balance: {formatNumber(swapState.fromToken.balance)}
             </span>
           </div>
           <div className="flex items-center gap-6">
@@ -600,7 +601,7 @@ function FlowSwapBox() {
           </div>
           <div className="flex items-center justify-between mt-1">
             <span className="text-xs text-white/40">
-              {swapState.fromAmount ? getBalanceUSD(Number(swapState.fromAmount).toFixed(2), livePrice ?? 1.5) : "$0.00"}
+              {swapState.fromAmount ? formatUSD(Number(swapState.fromAmount) * (livePrice ?? 1.5)) : "$0.00"}
             </span>
             <span className="text-xs text-white/40">
               ≈ {swapState.toAmount ? Number(swapState.toAmount).toFixed(2) : "0.00"}
@@ -623,7 +624,7 @@ function FlowSwapBox() {
           <div className="flex items-center justify-between mb-1">
             <Label className="text-white/80 text-sm">To</Label>
             <span className="text-xs text-white/60">
-              Balance: {formatBalance(swapState.toToken.balance)}
+              Balance: {formatNumber(swapState.toToken.balance)}
             </span>
           </div>
           <div className="flex items-center gap-6">
@@ -674,7 +675,7 @@ function FlowSwapBox() {
           </div>
           <div className="flex items-center justify-between mt-1">
             <span className="text-xs text-white/40">
-              {swapState.toAmount ? getBalanceUSD(Number(swapState.toAmount).toFixed(2), 1) : "$0.00"}
+              {swapState.toAmount ? formatUSD(Number(swapState.toAmount)) : "$0.00"}
             </span>
             <span className="text-xs text-white/40">
               ≈ {swapState.fromAmount ? Number(swapState.fromAmount).toFixed(2) : "0.00"}
