@@ -60,8 +60,9 @@ const GlassNavbar: React.FC<GlassNavbarProps> = ({
     <motion.div
       className={cn(
         "flex items-center justify-center gap-1 p-2 rounded-2xl",
-        "bg-black/40 backdrop-blur-xl border border-white/10",
-        "shadow-lg shadow-black/20",
+        "bg-black/60 backdrop-blur-2xl border border-white/20",
+        "shadow-2xl shadow-black/40",
+        "ring-1 ring-white/10",
         className
       )}
       initial={{ opacity: 0, y: -20 }}
@@ -77,11 +78,12 @@ const GlassNavbar: React.FC<GlassNavbarProps> = ({
             onClick={() => handleItemClick(item.id)}
             className={cn(
               "relative flex flex-col items-center justify-center gap-1 px-4 py-3 rounded-xl",
-              "transition-all duration-200 ease-in-out",
-              "hover:bg-white/10",
+              "transition-all duration-300 ease-out",
+              "hover:bg-white/15 hover:backdrop-blur-sm",
+              "hover:shadow-lg hover:shadow-white/10",
               isActive 
-                ? "bg-purple-500/80 text-white shadow-lg shadow-purple-500/25" 
-                : "text-white/70 hover:text-white"
+                ? "bg-gradient-to-br from-purple-500/90 to-blue-500/90 text-white shadow-xl shadow-purple-500/30 ring-1 ring-purple-400/50" 
+                : "text-white/70 hover:text-white hover:scale-105"
             )}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -89,7 +91,7 @@ const GlassNavbar: React.FC<GlassNavbarProps> = ({
             {/* Active background glow */}
             {isActive && (
               <motion.div
-                className="absolute inset-0 bg-purple-500/20 rounded-xl blur-sm"
+                className="absolute -inset-1 bg-gradient-to-br from-purple-500/30 to-blue-500/30 rounded-xl blur-md"
                 layoutId="activeBackground"
                 transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
               />

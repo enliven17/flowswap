@@ -48,7 +48,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import "@/components/ui/hide-number-spin.css";
+import "@/components/ui/modern-scrollbar.css";
 import { SlippageControl } from '@/components/ui/SlippageControl';
+import { RouteSelector, defaultRoutes } from '@/components/ui/RouteSelector';
+import { LimitOrderPanel } from '@/components/ui/LimitOrderPanel';
+import { GasFeeEstimator } from '@/components/ui/GasFeeEstimator';
 import { parseDecimal } from '@/utils/number';
 
 // Initialize Flow configuration
@@ -149,7 +153,13 @@ function useClickOutside<T extends HTMLElement = HTMLElement>(
   }, [ref, handler, mouseEvent]);
 }
 
-function FlowSwapBox() {
+function FlowSwapBox({ 
+  showAdvanced, 
+  setShowAdvanced 
+}: { 
+  showAdvanced: boolean; 
+  setShowAdvanced: (show: boolean) => void; 
+}) {
   const [user, setUser] = useState<{ addr?: string } | null>(null);
   const [lastEdited, setLastEdited] = useState<"from" | "to">("from");
   const [showTokenSelector, setShowTokenSelector] = useState(false);
@@ -174,6 +184,8 @@ function FlowSwapBox() {
     isLoading: false,
     status: 'idle'
   });
+
+
   // Remove needsTestTokenVault state - user already has tokens
   // const [needsTestTokenVault, setNeedsTestTokenVault] = useState(false);
 
@@ -532,7 +544,12 @@ function FlowSwapBox() {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      style={{ cursor: 'pointer', transition: 'box-shadow 0.25s, border-color 0.25s, transform 0.25s' }}
+      style={{ 
+        cursor: 'pointer', 
+        transition: 'box-shadow 0.25s, border-color 0.25s, transform 0.25s',
+        willChange: 'transform',
+        transform: 'translate3d(0, 0, 0)'
+      }}
     >
       <div className="relative bg-black/80 border border-white/10 rounded-3xl p-8 pt-12 pb-12 w-full max-w-lg mx-auto min-h-[650px] flex flex-col justify-between">
         {/* Header */}
@@ -615,6 +632,17 @@ function FlowSwapBox() {
             value={swapState.slippage}
             onChange={(value) => setSwapState(prev => ({ ...prev, slippage: value }))}
           />
+          
+          {/* Advanced Settings Toggle */}
+          <div className="mt-3">
+            <button
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+            >
+              {showAdvanced ? 'Hide' : 'Show'} Advanced Settings
+            </button>
+          </div>
+
         </div>
         {/* Swap Button */}
         <div className="flex justify-center -my-2 z-10 mb-8">
@@ -722,6 +750,10 @@ function FlowSwapBox() {
               </div>
           </motion.div>
         )} */}
+
+
+
+
 
         {/* Swap/Connect Button */}
         <div className="mt-8">
@@ -832,9 +864,92 @@ function FlowSwapBox() {
   );
 }
 
+// Advanced Settings Overlay Component
+function AdvancedSettingsOverlay({ 
+  isOpen, 
+  selectedRoute, 
+  onRouteChange, 
+  gasSpeed, 
+  onGasSpeedChange, 
+  currentPrice 
+}: {
+  isOpen: boolean;
+  selectedRoute: string;
+  onRouteChange: (route: string) => void;
+  gasSpeed: string;
+  onGasSpeedChange: (speed: string) => void;
+  currentPrice: number;
+}) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="mt-6 w-full max-w-md mx-auto"
+        >
+          <div className="space-y-4">
+            {/* Route Selector */}
+            <RouteSelector
+              selectedRoute={selectedRoute}
+              onRouteChange={onRouteChange}
+              routes={defaultRoutes}
+            />
+            
+            {/* Gas Fee Estimator */}
+            <GasFeeEstimator
+              selectedSpeed={gasSpeed}
+              onSpeedChange={onGasSpeedChange}
+            />
+            
+            {/* Limit Order Panel */}
+            <LimitOrderPanel
+              currentPrice={currentPrice}
+              onLimitOrderCreate={(targetPrice, expiryHours) => {
+                console.log('Limit order created:', { targetPrice, expiryHours });
+                // TODO: Implement limit order logic
+              }}
+            />
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 function FlowSwapDemo() {
   const [activeNavItem, setActiveNavItem] = useState('swap');
   const [user, setUser] = useState<{ addr?: string } | null>(null);
+  
+  // Advanced trading features
+  const [selectedRoute, setSelectedRoute] = useState('direct');
+  const [gasSpeed, setGasSpeed] = useState('standard');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  
+  // Live price hook
+  const { price: livePrice } = useLivePrice("ws://localhost:8081");
+
+  // Scroll progress effect
+  useEffect(() => {
+    const updateScrollProgress = () => {
+      const scrollTop = window.pageYOffset;
+      const docHeight = document.body.offsetHeight - window.innerHeight;
+      const scrollPercent = scrollTop / docHeight;
+      
+      const progressBar = document.querySelector('.scroll-container::before') as HTMLElement;
+      if (progressBar) {
+        progressBar.style.transform = `scaleX(${scrollPercent})`;
+      }
+      
+      // Alternative: Update CSS custom property
+      document.documentElement.style.setProperty('--scroll-progress', `${scrollPercent}`);
+    };
+
+    window.addEventListener('scroll', updateScrollProgress);
+    return () => window.removeEventListener('scroll', updateScrollProgress);
+  }, []);
 
   const handleNavItemClick = (itemId: string) => {
     setActiveNavItem(itemId);
@@ -890,9 +1005,21 @@ function FlowSwapDemo() {
   };
 
   return (
-    <div className="flex w-full flex-col min-h-screen bg-black relative">
+    <div 
+      className="flex w-full flex-col min-h-screen bg-black relative modern-scrollbar scroll-container" 
+      style={{ 
+        willChange: 'scroll-position'
+      }}
+    >
       {/* Animated background at z-0 */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
+      <div 
+        className="absolute inset-0 z-0 pointer-events-none" 
+        style={{ 
+          willChange: 'transform',
+          transform: 'translate3d(0, 0, 0)',
+          backfaceVisibility: 'hidden'
+        }}
+      >
         <CanvasRevealEffect
           animationSpeed={3}
           containerClassName="bg-black"
@@ -902,16 +1029,23 @@ function FlowSwapDemo() {
           reverse={false}
         />
       </div>
-      {/* Main content at z-10 */}
-      <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
+      
+      {/* Fixed Glass Navbar at top */}
+      <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50">
+        <GlassNavbar 
+          activeItem={activeNavItem}
+          onItemClick={handleNavItemClick}
+        />
+      </div>
+      
+      {/* REZALET DARK SCROLL HINT */}
+      <div className="scroll-hint-modern" onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}>
+        <ChevronDown className="w-3 h-3 text-white/40" />
+      </div>
+
+      {/* Main content with top padding for fixed navbar */}
+      <div className="relative z-10 flex items-center justify-center min-h-screen pt-32 pb-8 px-4">
         <div className="w-full flex flex-col items-center">
-          {/* Glass Navbar */}
-          <div className="mb-8">
-            <GlassNavbar 
-              activeItem={activeNavItem}
-              onItemClick={handleNavItemClick}
-            />
-          </div>
           
           <AnimatePresence mode="wait">
             {activeNavItem === 'swap' ? (
@@ -923,7 +1057,18 @@ function FlowSwapDemo() {
                 transition={{ type: 'spring', stiffness: 250, damping: 24 }}
                 className="w-full"
               >
-                <FlowSwapBox />
+                <FlowSwapBox 
+                  showAdvanced={showAdvanced}
+                  setShowAdvanced={setShowAdvanced}
+                />
+                <AdvancedSettingsOverlay
+                  isOpen={showAdvanced}
+                  selectedRoute={selectedRoute}
+                  onRouteChange={setSelectedRoute}
+                  gasSpeed={gasSpeed}
+                  onGasSpeedChange={setGasSpeed}
+                  currentPrice={livePrice ?? 1.5}
+                />
               </motion.div>
             ) : activeNavItem === 'pools' ? (
               <motion.div
