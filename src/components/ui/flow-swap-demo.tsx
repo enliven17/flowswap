@@ -10,7 +10,8 @@ import {
   AlertCircle,
   Loader2,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Droplets
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import GlassNavbar from './glass-navbar';
@@ -73,6 +74,7 @@ window.addEventListener('unhandledrejection', (event) => {
 
 // --- Flickering Grid Background Effect ---
 import { FlickeringGrid } from "@/components/ui/flickering-grid-hero";
+
 
 export const CanvasRevealEffect = ({
   animationSpeed = 10,
@@ -832,11 +834,59 @@ function FlowSwapBox() {
 
 function FlowSwapDemo() {
   const [activeNavItem, setActiveNavItem] = useState('swap');
+  const [user, setUser] = useState<{ addr?: string } | null>(null);
 
   const handleNavItemClick = (itemId: string) => {
     setActiveNavItem(itemId);
     // Burada farklı sayfalar arasında geçiş yapabilirsiniz
     console.log('Nav item clicked:', itemId);
+  };
+
+  // Flow wallet connection
+  async function connect() {
+    try {
+      await authenticate();
+    } catch (error) {
+      console.error("Authentication error:", error);
+    }
+  }
+
+  async function disconnect() {
+    try {
+      await unauthenticate();
+    } catch (error) {
+      console.error("Disconnect error:", error);
+    }
+  }
+
+  // Listen for user changes
+  useEffect(() => {
+    const unsubscribe = currentUser.subscribe((user) => {
+      setUser(user);
+    });
+    return () => { unsubscribe(); };
+  }, []);
+
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.6,
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5 }
+    }
   };
 
   return (
@@ -863,7 +913,190 @@ function FlowSwapDemo() {
             />
           </div>
           
-          <FlowSwapBox />
+          <AnimatePresence mode="wait">
+            {activeNavItem === 'swap' ? (
+              <motion.div
+                key="swap-panel"
+                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 250, damping: 24 }}
+                className="w-full"
+              >
+                <FlowSwapBox />
+              </motion.div>
+            ) : activeNavItem === 'pools' ? (
+              <motion.div
+                key="pools-panel"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                exit={{ opacity: 0, y: -20, scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 26 }}
+                className="w-full max-w-md mx-auto"
+                style={{ cursor: 'pointer', transition: 'box-shadow 0.25s, border-color 0.25s, transform 0.25s' }}
+              >
+                <div className="relative bg-black/80 border border-white/10 rounded-3xl p-8 pt-12 pb-12 w-full max-w-lg mx-auto min-h-[650px] flex flex-col justify-between">
+                  {/* Header */}
+                  <div className="mb-6">
+                    <div className="flex items-center gap-3 mb-1">
+                      <Droplets className="text-cyan-400 w-7 h-7" />
+                      <h2 className="text-2xl font-bold text-white tracking-tight">Pools</h2>
+                      <div className="flex items-center gap-1 ml-auto">
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                        <span className="text-xs text-blue-400">Active</span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-white/50 ml-1">Provide liquidity and earn rewards</p>
+                  </div>
+
+                  {/* Pool Stats */}
+                  <div className="bg-black/60 border border-white/10 rounded-2xl p-4 mb-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-white/60 text-xs mb-1">Total Value Locked</div>
+                        <div className="text-white text-lg font-bold">$2.4M</div>
+                      </div>
+                      <div>
+                        <div className="text-white/60 text-xs mb-1">24h Volume</div>
+                        <div className="text-white text-lg font-bold">$156K</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pool List */}
+                  <div className="flex-1 mb-4">
+                    <div className="grid grid-cols-1 gap-3">
+                      <div className="border border-white/10 rounded-2xl p-4 bg-white/5 hover:bg-white/10 transition-colors">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="flex -space-x-2">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-400 to-cyan-400 border-2 border-black flex items-center justify-center">
+                                <span className="text-white text-xs font-bold">F</span>
+                              </div>
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-400 to-blue-400 border-2 border-black flex items-center justify-center">
+                                <span className="text-white text-xs font-bold">T</span>
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-white font-semibold">FLOW/TEST</div>
+                              <div className="text-white/60 text-xs">Stable Pair</div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-green-400 text-sm font-semibold">+12.5% APR</div>
+                            <div className="text-white/60 text-xs">$1.2M TVL</div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button className="flex-1 py-2 px-4 rounded-lg border border-cyan-400/30 text-cyan-400 hover:bg-cyan-400/10 text-sm font-medium transition-colors">
+                            Add Liquidity
+                          </button>
+                          <button className="flex-1 py-2 px-4 rounded-lg bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 text-sm font-medium transition-colors">
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="border border-white/10 rounded-2xl p-4 bg-white/5 hover:bg-white/10 transition-colors">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="flex -space-x-2">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 border-2 border-black flex items-center justify-center">
+                                <span className="text-white text-xs font-bold">U</span>
+                              </div>
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-400 to-cyan-400 border-2 border-black flex items-center justify-center">
+                                <span className="text-white text-xs font-bold">F</span>
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-white font-semibold">USDC/FLOW</div>
+                              <div className="text-white/60 text-xs">Volatile Pair</div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-green-400 text-sm font-semibold">+8.7% APR</div>
+                            <div className="text-white/60 text-xs">$856K TVL</div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button className="flex-1 py-2 px-4 rounded-lg border border-cyan-400/30 text-cyan-400 hover:bg-cyan-400/10 text-sm font-medium transition-colors">
+                            Add Liquidity
+                          </button>
+                          <button className="flex-1 py-2 px-4 rounded-lg bg-gray-500/20 text-gray-400 text-sm font-medium cursor-not-allowed">
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Your Position */}
+                  <div className="bg-black/60 border border-white/10 rounded-2xl p-4 mb-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-white font-semibold">Your Positions</h3>
+                      <span className="text-xs text-white/60 bg-white/10 px-2 py-1 rounded-full">1 Active</span>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="flex -space-x-1">
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-400 to-cyan-400 border border-black"></div>
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-r from-green-400 to-blue-400 border border-black"></div>
+                          </div>
+                          <span className="text-white/70 text-sm">FLOW/TEST LP</span>
+                        </div>
+                        <span className="text-white text-sm font-medium">$1,234.56</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-white/70 text-sm">Rewards Earned</span>
+                        <span className="text-green-400 text-sm font-medium">+$45.67</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Button */}
+                  <div className="mt-6">
+                    {user?.addr ? (
+                      <motion.button
+                        className="w-full py-4 rounded-full font-semibold text-lg bg-gradient-to-r from-blue-400 to-purple-500 text-white hover:from-blue-300 hover:to-purple-400 transition-all duration-200"
+                        variants={itemVariants}
+                      >
+                        Manage Positions
+                      </motion.button>
+                    ) : (
+                      <motion.button
+                        className="w-full py-4 rounded-full font-semibold text-lg bg-white text-black hover:bg-neutral-100 transition-all duration-200"
+                        onClick={connect}
+                        variants={itemVariants}
+                      >
+                        Connect Wallet
+                      </motion.button>
+                    )}
+                    
+                    {/* Testnet Notice */}
+                    <div className="mt-4 text-center">
+                      <span className="text-xs text-white/50 bg-white/10 px-3 py-1 rounded-full">
+                        🧪 Running on Flow Testnet
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="default-panel"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="w-full"
+              >
+                <FlowSwapBox />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
         </div>
       </div>
     </div>
