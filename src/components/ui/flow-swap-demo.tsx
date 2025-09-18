@@ -47,6 +47,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import "@/components/ui/hide-number-spin.css";
+import { SlippageControl } from '@/components/ui/SlippageControl';
+import { parseDecimal } from '@/utils/number';
 
 // Initialize Flow configuration
 
@@ -575,7 +577,7 @@ function FlowSwapBox() {
                 placeholder="0.0"
                 value={swapState.fromAmount ? formatShortNumber(swapState.fromAmount) : ""}
                 onChange={(e) => {
-                  const value = e.target.value.replace(/[^0-9.]/g, "");
+                  const value = parseDecimal(e.target.value, 8);
                   setSwapState(prev => ({ ...prev, fromAmount: value }));
                   setLastEdited("from");
                 }}
@@ -607,6 +609,10 @@ function FlowSwapBox() {
               ≈ {swapState.toAmount ? Number(swapState.toAmount).toFixed(2) : "0.00"}
             </span>
           </div>
+          <SlippageControl
+            value={swapState.slippage}
+            onChange={(value) => setSwapState(prev => ({ ...prev, slippage: value }))}
+          />
         </div>
         {/* Swap Button */}
         <div className="flex justify-center -my-2 z-10 mb-8">
@@ -649,7 +655,7 @@ function FlowSwapBox() {
                 placeholder="0.0"
                 value={swapState.toAmount ? formatShortNumber(swapState.toAmount) : ""}
                 onChange={(e) => {
-                  const value = e.target.value.replace(/[^0-9.]/g, "");
+                  const value = parseDecimal(e.target.value, 8);
                   setSwapState(prev => ({ ...prev, toAmount: value }));
                   setLastEdited("to");
                 }}
