@@ -11,7 +11,8 @@ import {
   Loader2,
   ArrowUp,
   ArrowDown,
-  Droplets
+  Droplets,
+  Wallet
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import GlassNavbar from './glass-navbar';
@@ -864,6 +865,253 @@ function FlowSwapBox({
   );
 }
 
+// Balance Content Component
+function BalanceContent({ 
+  user, 
+  livePrice 
+}: { 
+  user: { addr?: string } | null; 
+  livePrice: number | null; 
+}) {
+  const [balances, setBalances] = useState({
+    flow: 0,
+    test: 0,
+    usdc: 0
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Flow client instance
+  const flowClient = useMemo(() => {
+    return new FlowSwapClient();
+  }, []);
+
+  // Fetch balances when user connects
+  useEffect(() => {
+    if (!user?.addr) {
+      setBalances({ flow: 0, test: 0, usdc: 0 });
+      setLastUpdated(null);
+      return;
+    }
+
+    const fetchBalances = async () => {
+      setIsLoading(true);
+      try {
+        console.log('Fetching balances for:', user.addr);
+        
+        const [flowBalance, testTokenBalance] = await Promise.all([
+          flowClient.getFlowBalance(user.addr),
+          flowClient.getTestTokenBalance(user.addr)
+        ]);
+
+        console.log('Fetched balances:', { flowBalance, testTokenBalance });
+
+        setBalances({
+          flow: flowBalance,
+          test: testTokenBalance,
+          usdc: 0 // USDC balance would need separate implementation
+        });
+        setLastUpdated(new Date());
+      } catch (error) {
+        console.error("Error fetching balances:", error);
+        // Keep previous balances on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBalances();
+  }, [user?.addr, flowClient]);
+
+  // Calculate portfolio values
+  const flowPrice = livePrice ?? 1.5;
+  const testPrice = 0.67; // Fallback price for TEST token
+  const usdcPrice = 1.0; // USDC is stable
+
+  const portfolioValue = 
+    (balances.flow * flowPrice) + 
+    (balances.test * testPrice) + 
+    (balances.usdc * usdcPrice);
+
+  const availableValue = portfolioValue; // All tokens are available for now
+  const stakedValue = 0; // No staking implemented yet
+  const rewardsValue = 0; // No rewards implemented yet
+
+  // Format currency
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
+  };
+
+  // Format token amount
+  const formatTokenAmount = (amount: number, decimals: number = 4) => {
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: decimals
+    }).format(amount);
+  };
+
+  if (!user?.addr) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <Wallet className="w-16 h-16 text-white/20 mx-auto mb-4" />
+          <h3 className="text-white/60 text-lg mb-2">Connect Your Wallet</h3>
+          <p className="text-white/40 text-sm">
+            Connect your wallet to view your balance and portfolio
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Portfolio Overview */}
+      <div className="bg-black/60 border border-white/10 rounded-2xl p-5 mb-6">
+        <div className="text-center mb-4">
+          <div className="text-white/60 text-sm mb-1">Total Portfolio Value</div>
+          <div className="text-white text-3xl font-bold">
+            {isLoading ? (
+              <div className="animate-pulse bg-white/10 h-8 w-32 mx-auto rounded"></div>
+            ) : (
+              formatCurrency(portfolioValue)
+            )}
+          </div>
+          <div className="text-white/40 text-xs mt-1">
+            {lastUpdated && `Last updated: ${lastUpdated.toLocaleTimeString()}`}
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4 mt-4">
+          <div className="text-center">
+            <div className="text-white/60 text-xs">Available</div>
+            <div className="text-white text-sm font-semibold">
+              {isLoading ? (
+                <div className="animate-pulse bg-white/10 h-4 w-16 mx-auto rounded"></div>
+              ) : (
+                formatCurrency(availableValue)
+              )}
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="text-white/60 text-xs">Staked</div>
+            <div className="text-white text-sm font-semibold">
+              {formatCurrency(stakedValue)}
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="text-white/60 text-xs">Rewards</div>
+            <div className="text-green-400 text-sm font-semibold">
+              {formatCurrency(rewardsValue)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Token List */}
+      <div className="flex-1 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-white font-semibold">Your Assets</h3>
+          {isLoading && (
+            <div className="flex items-center gap-2 text-white/40 text-xs">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Updating...
+            </div>
+          )}
+        </div>
+        <div className="space-y-3">
+          {/* FLOW Token */}
+          <div className="bg-black/60 border border-white/10 rounded-2xl p-4 hover:bg-white/5 transition-colors">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-400 to-cyan-400 flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">F</span>
+                </div>
+                <div>
+                  <div className="text-white font-semibold">FLOW</div>
+                  <div className="text-white/60 text-sm">Flow Token</div>
+                </div>
+              </div>
+              <div className="text-right">
+                {isLoading ? (
+                  <div className="space-y-1">
+                    <div className="animate-pulse bg-white/10 h-4 w-20 rounded"></div>
+                    <div className="animate-pulse bg-white/10 h-3 w-16 rounded"></div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-white font-semibold">
+                      {formatTokenAmount(balances.flow)} FLOW
+                    </div>
+                    <div className="text-white/60 text-sm">
+                      {formatCurrency(balances.flow * flowPrice)}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* TEST Token */}
+          <div className="bg-black/60 border border-white/10 rounded-2xl p-4 hover:bg-white/5 transition-colors">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-green-400 to-blue-400 flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">T</span>
+                </div>
+                <div>
+                  <div className="text-white font-semibold">TEST</div>
+                  <div className="text-white/60 text-sm">Test Token</div>
+                </div>
+              </div>
+              <div className="text-right">
+                {isLoading ? (
+                  <div className="space-y-1">
+                    <div className="animate-pulse bg-white/10 h-4 w-20 rounded"></div>
+                    <div className="animate-pulse bg-white/10 h-3 w-16 rounded"></div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-white font-semibold">
+                      {formatTokenAmount(balances.test)} TEST
+                    </div>
+                    <div className="text-white/60 text-sm">
+                      {formatCurrency(balances.test * testPrice)}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* USDC Token - Placeholder */}
+          <div className="bg-black/60 border border-white/10 rounded-2xl p-4 hover:bg-white/5 transition-colors opacity-50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">U</span>
+                </div>
+                <div>
+                  <div className="text-white font-semibold">USDC</div>
+                  <div className="text-white/60 text-sm">USD Coin</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-white/40 font-semibold">0.00 USDC</div>
+                <div className="text-white/30 text-sm">$0.00</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // Advanced Settings Overlay Component
 function AdvancedSettingsOverlay({ 
   isOpen, 
@@ -1048,7 +1296,69 @@ function FlowSwapDemo() {
         <div className="w-full flex flex-col items-center">
           
           <AnimatePresence mode="wait">
-            {activeNavItem === 'swap' ? (
+            {activeNavItem === 'balance' ? (
+              <motion.div
+                key="balance-panel"
+                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 250, damping: 24 }}
+                className="w-full max-w-md mx-auto"
+                style={{ cursor: 'pointer', transition: 'box-shadow 0.25s, border-color 0.25s, transform 0.25s' }}
+              >
+                <div className="relative bg-black/80 border border-white/10 rounded-3xl p-8 pt-12 pb-12 w-full max-w-lg mx-auto min-h-[650px] flex flex-col justify-between">
+                  {/* Header */}
+                  <div className="mb-8">
+                    <div className="flex items-center gap-3 mb-1">
+                      <Wallet className="text-green-400 w-7 h-7" />
+                      <h2 className="text-2xl font-bold text-white tracking-tight">Balance</h2>
+                      <div className="flex items-center gap-1 ml-auto">
+                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <span className="text-xs text-green-400">Live</span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-white/50 ml-1">Manage your crypto portfolio</p>
+                  </div>
+
+                  <BalanceContent user={user} livePrice={livePrice} />
+
+                  {/* Action Buttons */}
+                  <div className="mt-8">
+                    {user?.addr ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        <motion.button
+                          className="py-3 px-4 rounded-full font-semibold text-sm bg-gradient-to-r from-green-400 to-blue-500 text-white hover:from-green-300 hover:to-blue-400 transition-all duration-200"
+                          variants={itemVariants}
+                        >
+                          Send
+                        </motion.button>
+                        <motion.button
+                          className="py-3 px-4 rounded-full font-semibold text-sm border border-white/20 text-white hover:bg-white/10 transition-all duration-200"
+                          variants={itemVariants}
+                        >
+                          Receive
+                        </motion.button>
+                      </div>
+                    ) : (
+                      <motion.button
+                        className="w-full py-4 rounded-full font-semibold text-lg bg-white text-black hover:bg-neutral-100 transition-all duration-200"
+                        onClick={connect}
+                        variants={itemVariants}
+                      >
+                        Connect Wallet
+                      </motion.button>
+                    )}
+                    
+                    {/* Testnet Notice */}
+                    <div className="mt-4 text-center">
+                      <span className="text-xs text-white/50 bg-white/10 px-3 py-1 rounded-full">
+                        🧪 Running on Flow Testnet
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ) : activeNavItem === 'swap' ? (
               <motion.div
                 key="swap-panel"
                 initial={{ opacity: 0, y: 10, scale: 0.98 }}
