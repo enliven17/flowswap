@@ -3,7 +3,7 @@ export const APP_CONFIG = {
   version: '1.0.0',
   description: 'Decentralized token swap on Flow blockchain',
   author: 'FlowSwap Team',
-  
+
   // Network configuration
   network: {
     testnet: {
@@ -13,7 +13,7 @@ export const APP_CONFIG = {
       chainId: 'flow-testnet',
     },
     mainnet: {
-      name: 'Flow Mainnet', 
+      name: 'Flow Mainnet',
       rpcUrl: 'https://rest-mainnet.onflow.org',
       explorerUrl: 'https://flowscan.org',
       chainId: 'flow-mainnet',
