@@ -27,6 +27,7 @@ import {
 } from "@/bindings/flow-bindings";
 import { FlowToken, SwapState } from "@/types/tokens";
 import { useLivePrice } from "@/hooks/useLivePrice";
+import { FLOW_CONFIG } from "@/config/flow";
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -1179,19 +1180,31 @@ function FlowSwapDemo() {
   // Live price hook
   const { price: livePrice } = useLivePrice("ws://localhost:8081");
 
+  // Pools on-chain: client and amount state
+  const poolsClient = useMemo(() => new FlowSwapClient(), []);
+  const [poolAmount, setPoolAmount] = useState<string>("");
+  const [isAdding, setIsAdding] = useState(false);
+  const handleAddLiquidity = async () => {
+    if (!user?.addr) return;
+    const amt = Number(poolAmount);
+    if (!Number.isFinite(amt) || amt <= 0) return;
+    try {
+      setIsAdding(true);
+      await poolsClient.addFlowLiquidity(amt, FLOW_CONFIG.SWAP_CONTRACT);
+      setPoolAmount("");
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsAdding(false);
+    }
+  };
+  
   // Scroll progress effect
   useEffect(() => {
     const updateScrollProgress = () => {
       const scrollTop = window.pageYOffset;
       const docHeight = document.body.offsetHeight - window.innerHeight;
       const scrollPercent = scrollTop / docHeight;
-      
-      const progressBar = document.querySelector('.scroll-container::before') as HTMLElement;
-      if (progressBar) {
-        progressBar.style.transform = `scaleX(${scrollPercent})`;
-      }
-      
-      // Alternative: Update CSS custom property
       document.documentElement.style.setProperty('--scroll-progress', `${scrollPercent}`);
     };
 
@@ -1201,7 +1214,6 @@ function FlowSwapDemo() {
 
   const handleNavItemClick = (itemId: string) => {
     setActiveNavItem(itemId);
-    // Burada farklı sayfalar arasında geçiş yapabilirsiniz
     console.log('Nav item clicked:', itemId);
   };
 
@@ -1251,6 +1263,8 @@ function FlowSwapDemo() {
       transition: { duration: 0.5 }
     }
   };
+
+  const currentPool = FLOW_CONFIG.POOLS[0];
 
   return (
     <div 
@@ -1403,133 +1417,77 @@ function FlowSwapDemo() {
                       </div>
                     </div>
                     <p className="text-sm text-white/50 ml-1">Provide liquidity and earn rewards</p>
-                  </div>
-
-                  {/* Pool Stats */}
-                  <div className="bg-black/60 border border-white/10 rounded-2xl p-4 mb-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <div className="text-white/60 text-xs mb-1">Total Value Locked</div>
-                        <div className="text-white text-lg font-bold">$2.4M</div>
-                      </div>
-                      <div>
-                        <div className="text-white/60 text-xs mb-1">24h Volume</div>
-                        <div className="text-white text-lg font-bold">$156K</div>
-                      </div>
+                    <div className="mt-3">
+                      <button
+                        onClick={async () => {
+                          try {
+                            setIsAdding(true);
+                            await poolsClient.setupPoolFlowReceiver();
+                          } catch (e) {
+                            console.error(e);
+                          } finally {
+                            setIsAdding(false);
+                          }
+                        }}
+                        disabled={isAdding}
+                        className="px-3 py-2 rounded-lg border border-white/20 text-white/90 hover:bg-white/10 text-xs"
+                      >
+                        {isAdding ? 'Setting up...' : 'Setup Pool Receiver'}
+                      </button>
                     </div>
                   </div>
 
-                  {/* Pool List */}
+                  {/* Single Pool: FLOW/TEST */}
                   <div className="flex-1 mb-4">
-                    <div className="grid grid-cols-1 gap-2">
-                      <div className="border border-white/10 rounded-2xl p-3 bg-white/5 hover:bg-white/10 transition-colors">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-3">
-                            <div className="flex -space-x-2">
-                              <div className="w-7 h-7 rounded-full bg-gradient-to-r from-blue-400 to-cyan-400 border-2 border-black flex items-center justify-center">
-                                <span className="text-white text-xs font-bold">F</span>
-                              </div>
-                              <div className="w-7 h-7 rounded-full bg-gradient-to-r from-green-400 to-blue-400 border-2 border-black flex items-center justify-center">
-                                <span className="text-white text-xs font-bold">T</span>
-                              </div>
+                    <div className="border border-white/10 rounded-2xl p-4 bg-white/5">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex -space-x-2">
+                            <div className="w-7 h-7 rounded-full bg-gradient-to-r from-blue-400 to-cyan-400 border-2 border-black flex items-center justify-center">
+                              <span className="text-white text-xs font-bold">F</span>
                             </div>
-                            <div>
-                              <div className="text-white font-semibold">FLOW/TEST</div>
-                              <div className="text-white/60 text-xs">Stable Pair</div>
+                            <div className="w-7 h-7 rounded-full bg-gradient-to-r from-green-400 to-blue-400 border-2 border-black flex items-center justify-center">
+                              <span className="text-white text-xs font-bold">T</span>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className="text-green-400 text-sm font-semibold">+12.5% APR</div>
-                            <div className="text-white/60 text-xs">$1.2M TVL</div>
+                          <div>
+                            <div className="text-white font-semibold">{currentPool.name}</div>
+                            <div className="text-white/60 text-xs">Deposit FLOW</div>
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <button className="flex-1 py-1.5 px-3 rounded-lg border border-cyan-400/30 text-cyan-400 hover:bg-cyan-400/10 text-xs font-medium transition-colors">
-                            Add Liquidity
-                          </button>
-                          <button className="flex-1 py-1.5 px-3 rounded-lg bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 text-xs font-medium transition-colors">
-                            Remove
-                          </button>
-                        </div>
                       </div>
-
-                      <div className="border border-white/10 rounded-2xl p-3 bg-white/5 hover:bg-white/10 transition-colors">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-3">
-                            <div className="flex -space-x-2">
-                              <div className="w-7 h-7 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 border-2 border-black flex items-center justify-center">
-                                <span className="text-white text-xs font-bold">U</span>
-                              </div>
-                              <div className="w-7 h-7 rounded-full bg-gradient-to-r from-blue-400 to-cyan-400 border-2 border-black flex items-center justify-center">
-                                <span className="text-white text-xs font-bold">F</span>
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-white font-semibold">USDC/FLOW</div>
-                              <div className="text-white/60 text-xs">Volatile Pair</div>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-green-400 text-sm font-semibold">+8.7% APR</div>
-                            <div className="text-white/60 text-xs">$856K TVL</div>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <button className="flex-1 py-1.5 px-3 rounded-lg border border-cyan-400/30 text-cyan-400 hover:bg-cyan-400/10 text-xs font-medium transition-colors">
-                            Add Liquidity
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0.0"
+                          value={poolAmount}
+                          onChange={(e) => setPoolAmount(parseDecimal(e.target.value, 8))}
+                          className="flex-1 bg-transparent border border-white/20 rounded-lg px-3 py-2 text-white placeholder:text-white/40 text-sm"
+                        />
+                        {user?.addr ? (
+                          <button
+                            onClick={handleAddLiquidity}
+                            disabled={isAdding || !poolAmount}
+                            className="px-3 py-2 rounded-lg border border-cyan-400/30 text-cyan-300 hover:bg-cyan-400/10 text-sm font-medium disabled:opacity-50"
+                          >
+                            {isAdding ? 'Depositing...' : 'Deposit FLOW'}
                           </button>
-                          <button className="flex-1 py-1.5 px-3 rounded-lg bg-gray-500/20 text-gray-400 text-xs font-medium cursor-not-allowed">
-                            Remove
+                        ) : (
+                          <button
+                            onClick={connect}
+                            className="px-3 py-2 rounded-lg bg-white text-black hover:bg-neutral-100 text-sm font-medium"
+                          >
+                            Connect
                           </button>
-                        </div>
+                        )}
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Your Position */}
-                  <div className="bg-black/60 border border-white/10 rounded-2xl p-3 mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-white font-semibold text-sm">Your Positions</h3>
-                      <span className="text-xs text-white/60 bg-white/10 px-2 py-1 rounded-full">1 Active</span>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="flex -space-x-1">
-                            <div className="w-5 h-5 rounded-full bg-gradient-to-r from-blue-400 to-cyan-400 border border-black"></div>
-                            <div className="w-5 h-5 rounded-full bg-gradient-to-r from-green-400 to-blue-400 border border-black"></div>
-                          </div>
-                          <span className="text-white/70 text-xs">FLOW/TEST LP</span>
-                        </div>
-                        <span className="text-white text-xs font-medium">$1,234.56</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-white/70 text-xs">Rewards Earned</span>
-                        <span className="text-green-400 text-xs font-medium">+$45.67</span>
-                      </div>
+                      <div className="text-white/40 text-xs mt-2">Pool address: {currentPool.address}</div>
                     </div>
                   </div>
 
                   {/* Action Button */}
                   <div className="mt-6">
-                    {user?.addr ? (
-                      <motion.button
-                        className="w-full py-4 rounded-full font-semibold text-lg bg-gradient-to-r from-blue-400 to-purple-500 text-white hover:from-blue-300 hover:to-purple-400 transition-all duration-200"
-                        variants={itemVariants}
-                      >
-                        Manage Positions
-                      </motion.button>
-                    ) : (
-                      <motion.button
-                        className="w-full py-4 rounded-full font-semibold text-lg bg-white text-black hover:bg-neutral-100 transition-all duration-200"
-                        onClick={connect}
-                        variants={itemVariants}
-                      >
-                        Connect Wallet
-                      </motion.button>
-                    )}
-                    
-                    {/* Testnet Notice */}
                     <div className="mt-4 text-center">
                       <span className="text-xs text-white/50 bg-white/10 px-3 py-1 rounded-full">
                         🧪 Running on Flow Testnet
@@ -1547,7 +1505,7 @@ function FlowSwapDemo() {
                 transition={{ duration: 0.2 }}
                 className="w-full"
               >
-                <FlowSwapBox />
+                {/* Fallback could render swap */}
               </motion.div>
             )}
           </AnimatePresence>

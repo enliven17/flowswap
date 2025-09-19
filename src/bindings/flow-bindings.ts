@@ -17,6 +17,19 @@ export class FlowSwapClient {
     this.config = FLOW_CONFIG;
   }
 
+  async setupPoolFlowReceiver(): Promise<string> {
+    try {
+      const result = await mutate({
+        cadence: FLOW_TRANSACTIONS.SETUP_POOL_FLOW_RECEIVER,
+        args: (_arg: any, _t: any) => [],
+      });
+      return result;
+    } catch (error) {
+      console.error("Error setting up pool flow receiver:", error);
+      throw error;
+    }
+  }
+
   // Get Flow balance for an address
   async getFlowBalance(address: string): Promise<number> {
     try {
@@ -142,6 +155,22 @@ export class FlowSwapClient {
       return result;
     } catch (error) {
       console.error("Error swapping TestToken to FLOW:", error);
+      throw error;
+    }
+  }
+
+  async addFlowLiquidity(amount: number, poolAddress: string): Promise<string> {
+    try {
+      const result = await mutate({
+        cadence: FLOW_TRANSACTIONS.ADD_FLOW_LIQUIDITY,
+        args: (arg: typeof FlowSwapClient.argBuilder, t: typeof FlowSwapClient.cadenceTypes) => [
+          arg(amount.toFixed(8), t.UFix64 as unknown),
+          arg(poolAddress, t.Address as unknown)
+        ]
+      });
+      return result;
+    } catch (error) {
+      console.error("Error adding FLOW liquidity:", error);
       throw error;
     }
   }

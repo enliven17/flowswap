@@ -32,6 +32,17 @@ export const FLOW_CONFIG = {
   
   // Swap contract (placeholder - you'll need to deploy your own)
   SWAP_CONTRACT: import.meta.env.VITE_FLOW_SWAP_ADDRESS || "0x0c0c904844c9a720", // Latest contract address
+
+  // Future multi-pool support (single default for now)
+  POOLS: [
+    {
+      id: "flow-test",
+      name: "FLOW/TEST",
+      address: import.meta.env.VITE_FLOW_SWAP_ADDRESS || "0x0c0c904844c9a720",
+      tokens: ["FLOW", "TEST"],
+      type: "stable",
+    },
+  ],
   
   // Network configuration
   NETWORK: "testnet",
@@ -174,7 +185,51 @@ export const FLOW_TRANSACTIONS = {
         }
       }
     }
-  `
+  `,
+  ADD_FLOW_LIQUIDITY: `
+    import FungibleToken from 0x9a0766d93b6608b7
+    import FlowToken from 0x7e60df042a9c0868
+    
+    transaction(amount: UFix64, poolAddr: Address) {
+      prepare(signer: auth(Storage, Capabilities) &Account) {
+        if signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault) == nil {
+          signer.storage.save(<- FlowToken.createEmptyVault(), to: /storage/flowTokenVault)
+          let recvCap = signer.capabilities.storage.issue<&FlowToken.Vault>(/storage/flowTokenVault)
+          signer.capabilities.publish(recvCap, at: /public/flowTokenReceiver)
+          let balCap = signer.capabilities.storage.issue<&FlowToken.Vault>(/storage/flowTokenVault)
+          signer.capabilities.publish(balCap, at: /public/flowTokenBalance)
+        }
+        let vaultRef = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(from: /storage/flowTokenVault)
+          ?? panic("Could not borrow user's FlowToken Vault")
+        let withdrawn <- vaultRef.withdraw(amount: amount)
+        let pool = getAccount(poolAddr)
+        let poolReceiver = pool.capabilities.get<&{FungibleToken.Receiver}>(/public/flowSwapFlowReceiver)
+          .borrow()
+          ?? panic("Could not borrow pool's Flow receiver")
+        poolReceiver.deposit(from: <- withdrawn)
+      }
+    }
+  `,
+  SETUP_POOL_FLOW_RECEIVER: `
+    import FungibleToken from 0x9a0766d93b6608b7
+    import FlowToken from 0x7e60df042a9c0868
+
+    transaction() {
+      prepare(signer: AuthAccount) {
+        if signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault) == nil {
+          signer.save(<- FlowToken.createEmptyVault(), to: /storage/flowTokenVault)
+          signer.link<&FlowToken.Vault{FungibleToken.Receiver}>(/public/flowTokenReceiver, target: /storage/flowTokenVault)
+          signer.link<&FlowToken.Vault{FungibleToken.Balance}>(/public/flowTokenBalance, target: /storage/flowTokenVault)
+        }
+        // Publish a dedicated receiver path for pool deposits
+        signer.unlink(/public/flowSwapFlowReceiver)
+        signer.link<&FlowToken.Vault{FungibleToken.Receiver}>(
+          /public/flowSwapFlowReceiver,
+          target: /storage/flowTokenVault
+        )
+      }
+    }
+  `,
 };
 
 // Flow scripts for price fetching (placeholder)
