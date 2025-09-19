@@ -21,7 +21,7 @@ export class FlowSwapClient {
     try {
       const result = await mutate({
         cadence: FLOW_TRANSACTIONS.SETUP_POOL_FLOW_RECEIVER,
-        args: (_arg: any, _t: any) => [],
+        args: (_arg: typeof FlowSwapClient.argBuilder, _t: typeof FlowSwapClient.cadenceTypes) => [],
       });
       return result;
     } catch (error) {
