@@ -7,7 +7,7 @@ export class FlowSwapClient {
   private config: typeof FLOW_CONFIG;
 
   // Helper types to avoid `any` when building Cadence args with FCL
-  private static readonly cadenceTypes: { Address?: unknown; UFix64?: unknown } = {};
+  private static readonly cadenceTypes: { Address?: unknown; UFix64?: unknown; String?: unknown } = {};
   private static argBuilder(value: unknown, cadenceType: unknown): unknown {
     // This function exists purely for typing clarity when passed into FCL's args callback
     return { value, cadenceType } as unknown;
@@ -86,8 +86,8 @@ export class FlowSwapClient {
     try {
       const result = await query({
         cadence: `
-          import FungibleToken from 0x9a0766d93b6608b7
-          import TestToken from 0x0c0c904844c9a720
+          import FungibleToken from 0xee82856bf20e2aa6
+          import TestToken from 0xf8d6e0586b0a20c7
           access(all) fun main(address: Address): Bool {
             let account = getAccount(address)
             let vaultCap = account.capabilities.get<&TestToken.Vault>(/public/testTokenVault)
@@ -202,8 +202,8 @@ export class FlowSwapClient {
 
   private getFlowTransferTransaction(): string {
     return `
-      import FungibleToken from 0x9a0766d93b6608b7
-      import FlowToken from 0x7e60df042a9c0868
+      import FungibleToken from 0xee82856bf20e2aa6
+      import FlowToken from 0x0ae53cb6e3f42a79
       
       transaction(to: Address, amount: UFix64) {
         let sentVault: @FungibleToken.Vault
@@ -229,8 +229,8 @@ export class FlowSwapClient {
 
   private getTestTokenTransferTransaction(): string {
     return `
-      import FungibleToken from 0x9a0766d93b6608b7
-      import TestToken from 0x0c0c904844c9a720
+      import FungibleToken from 0xee82856bf20e2aa6
+      import TestToken from 0xf8d6e0586b0a20c7
       transaction(to: Address, amount: UFix64) {
         let sentVault: @FungibleToken.Vault
         prepare(signer: auth(Storage) &Account) {
@@ -247,6 +247,217 @@ export class FlowSwapClient {
         }
       }
     `;
+  }
+
+  // Pool and Liquidity Functions
+
+  // Get pool information
+  async getPoolInfo(): Promise<{
+    tokenA: string;
+    tokenB: string;
+    reserveA: number;
+    reserveB: number;
+    totalLiquidity: number;
+    swapFee: number;
+    spotPrice: number;
+  }> {
+    try {
+      const result = await query({
+        cadence: `
+          import FlowSwap from 0xf8d6e0586b0a20c7
+          access(all) fun main(): {String: AnyStruct} {
+            let FlowSwap = getAccount(0xf8d6e0586b0a20c7).contracts.borrow<&FlowSwap>(name: "FlowSwap")
+              ?? panic("FlowSwap contract not found")
+            return FlowSwap.getPoolInfo()
+          }
+        `
+      });
+
+      return {
+        tokenA: result.tokenA || "FLOW",
+        tokenB: result.tokenB || "TEST",
+        reserveA: parseFloat(result.reserveA || "0"),
+        reserveB: parseFloat(result.reserveB || "0"),
+        totalLiquidity: parseFloat(result.totalLiquidity || "0"),
+        swapFee: parseFloat(result.swapFee || "0"),
+        spotPrice: parseFloat(result.spotPrice || "0")
+      };
+    } catch (error) {
+      console.error("Error getting pool info:", error);
+      throw error;
+    }
+  }
+
+  // Get user's LP token balance
+  async getLPBalance(address: string): Promise<number> {
+    try {
+      const result = await query({
+        cadence: `
+          import FlowSwap from 0xf8d6e0586b0a20c7
+          access(all) fun main(userAddress: Address): UFix64 {
+            let FlowSwap = getAccount(0xf8d6e0586b0a20c7).contracts.borrow<&FlowSwap>(name: "FlowSwap")
+              ?? panic("FlowSwap contract not found")
+            return FlowSwap.getUserLPBalance(user: userAddress)
+          }
+        `,
+        args: (arg: typeof FlowSwapClient.argBuilder, t: typeof FlowSwapClient.cadenceTypes) => [
+          arg(address, t.Address as unknown)
+        ]
+      });
+      return parseFloat(result || "0");
+    } catch (error) {
+      console.error("Error getting LP balance:", error);
+      return 0;
+    }
+  }
+
+  // Calculate swap output
+  async calculateSwapOutput(amountIn: number, tokenIn: string, tokenOut: string): Promise<number> {
+    try {
+      const result = await query({
+        cadence: `
+          import FlowSwap from 0xf8d6e0586b0a20c7
+          access(all) fun main(amountIn: UFix64, tokenIn: String, tokenOut: String): UFix64 {
+            let FlowSwap = getAccount(0xf8d6e0586b0a20c7).contracts.borrow<&FlowSwap>(name: "FlowSwap")
+              ?? panic("FlowSwap contract not found")
+            return FlowSwap.calculateSwapOutput(amountIn: amountIn, tokenIn: tokenIn, tokenOut: tokenOut)
+          }
+        `,
+        args: (arg: typeof FlowSwapClient.argBuilder, t: typeof FlowSwapClient.cadenceTypes) => [
+          arg(amountIn.toFixed(8), t.UFix64 as unknown),
+          arg(tokenIn, t.String as unknown),
+          arg(tokenOut, t.String as unknown)
+        ]
+      });
+      return parseFloat(result || "0");
+    } catch (error) {
+      console.error("Error calculating swap output:", error);
+      return 0;
+    }
+  }
+
+  // Execute swap
+  async executeSwap(tokenIn: string, tokenOut: string, amountIn: number, minAmountOut: number, userAddress: string): Promise<string> {
+    try {
+      const result = await mutate({
+        cadence: `
+          import FlowSwap from 0xf8d6e0586b0a20c7
+          transaction(tokenIn: String, tokenOut: String, amountIn: UFix64, minAmountOut: UFix64, userAddress: Address) {
+            execute {
+              let result = FlowSwap.executeSwap(
+                tokenIn: tokenIn,
+                tokenOut: tokenOut,
+                amountIn: amountIn,
+                minAmountOut: minAmountOut,
+                user: userAddress
+              )
+              log("Swap completed. Output: ".concat(result.toString()))
+            }
+          }
+        `,
+        args: (arg: typeof FlowSwapClient.argBuilder, t: typeof FlowSwapClient.cadenceTypes) => [
+          arg(tokenIn, t.String as unknown),
+          arg(tokenOut, t.String as unknown),
+          arg(amountIn.toFixed(8), t.UFix64 as unknown),
+          arg(minAmountOut.toFixed(8), t.UFix64 as unknown),
+          arg(userAddress, t.Address as unknown)
+        ]
+      });
+      return result;
+    } catch (error) {
+      console.error("Error executing swap:", error);
+      throw error;
+    }
+  }
+
+  // Add liquidity
+  async addLiquidity(amountA: number, amountB: number, userAddress: string): Promise<string> {
+    try {
+      const result = await mutate({
+        cadence: `
+          import FlowSwap from 0xf8d6e0586b0a20c7
+          transaction(amountA: UFix64, amountB: UFix64, userAddress: Address) {
+            execute {
+              let result = FlowSwap.addLiquidity(
+                amountA: amountA,
+                amountB: amountB,
+                provider: userAddress
+              )
+              log("Liquidity added. LP tokens minted: ".concat(result.toString()))
+            }
+          }
+        `,
+        args: (arg: typeof FlowSwapClient.argBuilder, t: typeof FlowSwapClient.cadenceTypes) => [
+          arg(amountA.toFixed(8), t.UFix64 as unknown),
+          arg(amountB.toFixed(8), t.UFix64 as unknown),
+          arg(userAddress, t.Address as unknown)
+        ]
+      });
+      return result;
+    } catch (error) {
+      console.error("Error adding liquidity:", error);
+      throw error;
+    }
+  }
+
+  // Remove liquidity
+  async removeLiquidity(liquidityAmount: number, userAddress: string): Promise<string> {
+    try {
+      const result = await mutate({
+        cadence: `
+          import FlowSwap from 0xf8d6e0586b0a20c7
+          transaction(liquidityAmount: UFix64, userAddress: Address) {
+            execute {
+              let result = FlowSwap.removeLiquidity(
+                liquidityAmount: liquidityAmount,
+                provider: userAddress
+              )
+              log("Liquidity removed. Returned: ".concat(result.amountA.toString()).concat(" FLOW, ").concat(result.amountB.toString()).concat(" TEST"))
+            }
+          }
+        `,
+        args: (arg: typeof FlowSwapClient.argBuilder, t: typeof FlowSwapClient.cadenceTypes) => [
+          arg(liquidityAmount.toFixed(8), t.UFix64 as unknown),
+          arg(userAddress, t.Address as unknown)
+        ]
+      });
+      return result;
+    } catch (error) {
+      console.error("Error removing liquidity:", error);
+      throw error;
+    }
+  }
+
+  // Calculate optimal liquidity amounts
+  async calculateOptimalLiquidity(amountA: number): Promise<{
+    amountA: number;
+    amountB: number;
+    liquidity: number;
+  }> {
+    try {
+      const result = await query({
+        cadence: `
+          import FlowSwap from 0xf8d6e0586b0a20c7
+          access(all) fun main(amountA: UFix64): {String: UFix64} {
+            let FlowSwap = getAccount(0xf8d6e0586b0a20c7).contracts.borrow<&FlowSwap>(name: "FlowSwap")
+              ?? panic("FlowSwap contract not found")
+            return FlowSwap.calculateOptimalLiquidity(amountA: amountA)
+          }
+        `,
+        args: (arg: typeof FlowSwapClient.argBuilder, t: typeof FlowSwapClient.cadenceTypes) => [
+          arg(amountA.toFixed(8), t.UFix64 as unknown)
+        ]
+      });
+
+      return {
+        amountA: parseFloat(result.amountA || "0"),
+        amountB: parseFloat(result.amountB || "0"),
+        liquidity: parseFloat(result.liquidity || "0")
+      };
+    } catch (error) {
+      console.error("Error calculating optimal liquidity:", error);
+      return { amountA: 0, amountB: 0, liquidity: 0 };
+    }
   }
 }
 

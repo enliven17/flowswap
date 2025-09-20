@@ -1,6 +1,6 @@
-import FungibleToken from 0x9a0766d93b6608b7
-import FlowToken from 0x7e60df042a9c0868
-import TestToken from 0x0c0c904844c9a720
+import FungibleToken from 0xee82856bf20e2aa6
+import FlowToken from 0x0ae53cb6e3f42a79
+import TestToken from 0xf8d6e0586b0a20c7
 
 /// FlowSwap - A simple token swap contract for Flow blockchain
 /// This is a basic implementation - you may want to add more features like:
@@ -55,6 +55,46 @@ access(all) contract FlowSwap {
         }
     }
     
+    // LP Token Resource
+    access(all) resource LPToken: FungibleToken.Vault {
+        access(all) var balance: UFix64
+        
+        init(balance: UFix64) {
+            self.balance = balance
+        }
+        
+        access(FungibleToken.Withdraw) fun withdraw(amount: UFix64): @{FungibleToken.Vault} {
+            self.balance = self.balance - amount
+            return <-create LPToken(balance: amount)
+        }
+        
+        access(all) fun deposit(from: @{FungibleToken.Vault}) {
+            let vault <- from as! @LPToken
+            self.balance = self.balance + vault.balance
+            destroy vault
+        }
+        
+        access(all) fun getBalance(): UFix64 {
+            return self.balance
+        }
+        
+        access(all) view fun isAvailableToWithdraw(amount: UFix64): Bool {
+            return self.balance >= amount
+        }
+        
+        access(all) fun createEmptyVault(): @{FungibleToken.Vault} {
+            return <-create LPToken(balance: 0.0)
+        }
+        
+        access(all) view fun getViews(): [Type] {
+            return []
+        }
+        
+        access(all) fun resolveView(_ view: Type): AnyStruct? {
+            return nil
+        }
+    }
+    
     // Storage
     access(self) var totalLiquidity: UFix64
     access(self) var tokenAReserves: UFix64
@@ -62,14 +102,14 @@ access(all) contract FlowSwap {
     access(self) var tokenASymbol: String
     access(self) var tokenBSymbol: String
     
+    // LP Token tracking
+    access(self) var userLPBalances: {Address: UFix64}
+    
     // Admin
     access(self) var admin: Address
     
     // Fee (0.3% = 0.003)
     access(self) var swapFee: UFix64
-    
-    access(self) var flowVault: @FlowToken.Vault
-    access(self) var testTokenVault: @TestToken.Vault
     
     init() {
         self.totalLiquidity = 0.0
@@ -77,18 +117,24 @@ access(all) contract FlowSwap {
         self.tokenBReserves = 0.0
         self.tokenASymbol = "FLOW"
         self.tokenBSymbol = "TEST"
+        self.userLPBalances = {}
         self.admin = self.account.address
         self.swapFee = 0.003
-        self.flowVault <- FlowToken.createEmptyVault(vaultType: Type<@FlowToken.Vault>())
-        self.testTokenVault <- TestToken.createEmptyVault()
+        
+        // Create and store vaults in account storage
+        let flowVault <- FlowToken.createEmptyVault(vaultType: Type<@FlowToken.Vault>())
+        let testTokenVault <- TestToken.createEmptyVault()
+        
+        self.account.storage.save(<-flowVault, to: /storage/flowSwapFlowVault)
+        self.account.storage.save(<-testTokenVault, to: /storage/flowSwapTestVault)
         
         // Publish receiver capabilities for liquidity provision
         self.account.capabilities.publish(
-            self.account.capabilities.storage.issue<&{FungibleToken.Receiver}>(/storage/flowSwapFlowVault),
+            self.account.capabilities.storage.issue<&FlowToken.Vault>(/storage/flowSwapFlowVault),
             at: /public/flowSwapFlowReceiver
         )
         self.account.capabilities.publish(
-            self.account.capabilities.storage.issue<&{FungibleToken.Receiver}>(/storage/flowSwapTestVault),
+            self.account.capabilities.storage.issue<&TestToken.Vault>(/storage/flowSwapTestVault),
             at: /public/flowSwapTestReceiver
         )
     }
@@ -124,12 +170,17 @@ access(all) contract FlowSwap {
         let adminFlowVault = self.account.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(from: /storage/flowTokenVault)
             ?? panic("Admin Flow vault not found")
         let flowToTransfer <- adminFlowVault.withdraw(amount: amountA)
-        self.flowVault.deposit(from: <- flowToTransfer)
+        let flowSwapVault = self.account.storage.borrow<&FlowToken.Vault>(from: /storage/flowSwapFlowVault)
+            ?? panic("FlowSwap Flow vault not found")
+        flowSwapVault.deposit(from: <- flowToTransfer)
+        
         // Transfer TestToken from admin vault to FlowSwap vault
         let adminTestVault = self.account.storage.borrow<auth(FungibleToken.Withdraw) &TestToken.Vault>(from: /storage/testTokenVault)
             ?? panic("Admin TestToken vault not found")
         let testToTransfer <- adminTestVault.withdraw(amount: amountB)
-        self.testTokenVault.deposit(from: <- testToTransfer)
+        let testSwapVault = self.account.storage.borrow<&TestToken.Vault>(from: /storage/flowSwapTestVault)
+            ?? panic("FlowSwap Test vault not found")
+        testSwapVault.deposit(from: <- testToTransfer)
         
         // Calculate and add liquidity
         var liquidityMinted: UFix64 = 0.0
@@ -216,7 +267,9 @@ access(all) contract FlowSwap {
             self.tokenAReserves = self.tokenAReserves + amountIn
             self.tokenBReserves = self.tokenBReserves - amountOut
             // FLOW -> TEST: Kullanıcıya TEST gönder
-            let tokensToSend <- self.testTokenVault.withdraw(amount: amountOut)
+            let testVault = self.account.storage.borrow<auth(FungibleToken.Withdraw) &TestToken.Vault>(from: /storage/flowSwapTestVault)
+                ?? panic("FlowSwap Test vault not found")
+            let tokensToSend <- testVault.withdraw(amount: amountOut)
             let userAccount = getAccount(user)
             let userReceiver = userAccount.capabilities.get<&TestToken.Vault>(/public/testTokenVault)
                 .borrow()
@@ -226,7 +279,9 @@ access(all) contract FlowSwap {
             self.tokenBReserves = self.tokenBReserves + amountIn
             self.tokenAReserves = self.tokenAReserves - amountOut
             // TEST -> FLOW: Kullanıcıya FLOW gönder
-            let flowToSend <- self.flowVault.withdraw(amount: amountOut)
+            let flowVault = self.account.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(from: /storage/flowSwapFlowVault)
+                ?? panic("FlowSwap Flow vault not found")
+            let flowToSend <- flowVault.withdraw(amount: amountOut)
             let userAccount = getAccount(user)
             let userReceiver = userAccount.capabilities.get<&FlowToken.Vault>(/public/flowTokenReceiver)
                 .borrow()
@@ -273,6 +328,10 @@ access(all) contract FlowSwap {
         self.tokenBReserves = self.tokenBReserves + amountB
         self.totalLiquidity = self.totalLiquidity + liquidityMinted
         
+        // Update user LP balance
+        let currentBalance = self.userLPBalances[provider] ?? 0.0
+        self.userLPBalances[provider] = currentBalance + liquidityMinted
+        
         emit LiquidityAdded(
             provider: provider,
             tokenA: self.tokenASymbol,
@@ -294,12 +353,41 @@ access(all) contract FlowSwap {
             liquidityAmount <= self.totalLiquidity: "Insufficient liquidity"
         }
         
+        let userBalance = self.userLPBalances[provider] ?? 0.0
+        if liquidityAmount > userBalance {
+            panic("Insufficient LP token balance")
+        }
+        
         let amountA = (liquidityAmount * self.tokenAReserves) / self.totalLiquidity
         let amountB = (liquidityAmount * self.tokenBReserves) / self.totalLiquidity
         
         self.tokenAReserves = self.tokenAReserves - amountA
         self.tokenBReserves = self.tokenBReserves - amountB
         self.totalLiquidity = self.totalLiquidity - liquidityAmount
+        
+        // Update user LP balance
+        self.userLPBalances[provider] = userBalance - liquidityAmount
+        
+        // Transfer tokens back to user
+        let userAccount = getAccount(provider)
+        
+        // Transfer FLOW
+        let flowVault = self.account.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(from: /storage/flowSwapFlowVault)
+            ?? panic("FlowSwap Flow vault not found")
+        let flowToSend <- flowVault.withdraw(amount: amountA)
+        let userFlowReceiver = userAccount.capabilities.get<&FlowToken.Vault>(/public/flowTokenReceiver)
+            .borrow()
+            ?? panic("User Flow receiver not found")
+        userFlowReceiver.deposit(from: <-flowToSend)
+        
+        // Transfer TEST
+        let testVault = self.account.storage.borrow<auth(FungibleToken.Withdraw) &TestToken.Vault>(from: /storage/flowSwapTestVault)
+            ?? panic("FlowSwap Test vault not found")
+        let testToSend <- testVault.withdraw(amount: amountB)
+        let userTestReceiver = userAccount.capabilities.get<&TestToken.Vault>(/public/testTokenVault)
+            .borrow()
+            ?? panic("User Test receiver not found")
+        userTestReceiver.deposit(from: <-testToSend)
         
         emit LiquidityRemoved(
             provider: provider,
@@ -320,6 +408,59 @@ access(all) contract FlowSwap {
     // Get total liquidity
     access(all) fun getTotalLiquidity(): UFix64 {
         return self.totalLiquidity
+    }
+    
+    // Create LP Token vault for user
+    access(all) fun createLPTokenVault(): @LPToken {
+        return <-create LPToken(balance: 0.0)
+    }
+    
+    // Get user LP balance
+    access(all) fun getUserLPBalance(user: Address): UFix64 {
+        return self.userLPBalances[user] ?? 0.0
+    }
+    
+    // Setup user LP vault (called by setup transaction)
+    access(all) fun setupUserLPVault(user: Address) {
+        // Initialize user LP balance if not exists
+        if self.userLPBalances[user] == nil {
+            self.userLPBalances[user] = 0.0
+        }
+    }
+    
+    // Get pool information
+    access(all) fun getPoolInfo(): {String: AnyStruct} {
+        return {
+            "tokenA": self.tokenASymbol,
+            "tokenB": self.tokenBSymbol,
+            "reserveA": self.tokenAReserves,
+            "reserveB": self.tokenBReserves,
+            "totalLiquidity": self.totalLiquidity,
+            "swapFee": self.swapFee,
+            "spotPrice": self.getSpotPrice(tokenIn: self.tokenASymbol, tokenOut: self.tokenBSymbol)
+        }
+    }
+    
+    // Calculate optimal liquidity amounts
+    access(all) fun calculateOptimalLiquidity(amountA: UFix64): {String: UFix64} {
+        if self.totalLiquidity == 0.0 {
+            // First liquidity provision - any ratio is acceptable
+            return {
+                "amountA": amountA,
+                "amountB": amountA, // 1:1 ratio for initial liquidity
+                "liquidity": self.sqrt(y: amountA * amountA)
+            }
+        } else {
+            // Calculate required amountB based on current ratio
+            let amountB = (amountA * self.tokenBReserves) / self.tokenAReserves
+            let liquidity = (amountA * self.totalLiquidity) / self.tokenAReserves
+            
+            return {
+                "amountA": amountA,
+                "amountB": amountB,
+                "liquidity": liquidity
+            }
+        }
     }
     
     // Helper function for square root

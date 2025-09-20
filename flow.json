@@ -19,6 +19,10 @@
 		"testnet": "access.devnet.nodes.onflow.org:9000"
 	},
 	"accounts": {
+		"emulator-account": {
+			"address": "f8d6e0586b0a20c7",
+			"key": "2eae2f31cb5b756151fa11d82949c634b8f28796a711d7eb1e52cc301ed11111"
+		},
 		"flowswap": {
 			"address": "fd90865386855394",
 			"key": {
@@ -52,6 +56,12 @@
 		}
 	},
 	"deployments": {
+		"emulator": {
+			"emulator-account": [
+				"TestToken",
+				"FlowSwap"
+			]
+		},
 		"testnet": {
 			"testnet-deployer": [
 				"TestToken",

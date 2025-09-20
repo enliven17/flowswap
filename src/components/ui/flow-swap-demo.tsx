@@ -280,36 +280,57 @@ function FlowSwapBox({
   //   // Mint functionality removed - user already has tokens
   // };
 
-  // Calculate swap amounts
+  // Calculate swap amounts using real contract data
   useEffect(() => {
-    if (lastEdited === "from") {
-      if (!swapState.fromAmount) {
-        setSwapState((p) => ({ ...p, toAmount: "" }));
-        return;
+    const calculateOutput = async () => {
+      if (lastEdited === "from") {
+        if (!swapState.fromAmount) {
+          setSwapState((p) => ({ ...p, toAmount: "" }));
+          return;
+        }
+        
+        const amountIn = parseFloat(swapState.fromAmount);
+        if (amountIn <= 0) return;
+        
+        try {
+          // Use real contract calculation
+          const amountOut = await flowClient.calculateSwapOutput(
+            amountIn, 
+            swapState.fromToken.symbol, 
+            swapState.toToken.symbol
+          );
+          setSwapState((p) => ({ ...p, toAmount: amountOut.toFixed(6) }));
+        } catch (error) {
+          console.error("Error calculating swap output:", error);
+          // Fallback to price-based calculation
+          const price = livePrice ?? (swapState.fromToken.symbol === "FLOW" ? 1.5 : 0.67);
+          const amountOut = amountIn * price;
+          setSwapState((p) => ({ ...p, toAmount: amountOut.toFixed(6) }));
+        }
+      } else if (lastEdited === "to") {
+        if (!swapState.toAmount) {
+          setSwapState((p) => ({ ...p, fromAmount: "" }));
+          return;
+        }
+        
+        const amountOut = parseFloat(swapState.toAmount);
+        if (amountOut <= 0) return;
+        
+        try {
+          // For reverse calculation, we'll use price-based for now
+          const basePrice = livePrice ?? (swapState.fromToken.symbol === "FLOW" ? 1.5 : 0.67);
+          const inversePrice = 1 / basePrice;
+          const amountIn = amountOut * inversePrice;
+          setSwapState((p) => ({ ...p, fromAmount: amountIn.toFixed(6) }));
+        } catch (error) {
+          console.error("Error calculating reverse swap:", error);
+        }
       }
-      
-      const amountIn = parseFloat(swapState.fromAmount);
-      // Use live price if available, otherwise use fallback prices
-      const price = livePrice ?? (swapState.fromToken.symbol === "FLOW" ? 1.5 : 0.67);
-      const amountOut = amountIn * price;
-      
-      setSwapState((p) => ({ ...p, toAmount: amountOut.toFixed(6) }));
-    } else if (lastEdited === "to") {
-      if (!swapState.toAmount) {
-        setSwapState((p) => ({ ...p, fromAmount: "" }));
-        return;
-      }
-      
-      const amountOut = parseFloat(swapState.toAmount);
-      // Use live price if available, otherwise use fallback prices
-      // For reverse calculation, we need the inverse price
-      const basePrice = livePrice ?? (swapState.fromToken.symbol === "FLOW" ? 1.5 : 0.67);
-      const inversePrice = 1 / basePrice;
-      const amountIn2 = amountOut * inversePrice;
-      
-      setSwapState((p) => ({ ...p, fromAmount: amountIn2.toFixed(6) }));
-    }
-  }, [swapState.fromAmount, swapState.toAmount, swapState.fromToken, swapState.toToken, lastEdited, livePrice]);
+    };
+
+    const timeoutId = setTimeout(calculateOutput, 300); // Debounce
+    return () => clearTimeout(timeoutId);
+  }, [swapState.fromAmount, swapState.toAmount, swapState.fromToken, swapState.toToken, lastEdited, livePrice, flowClient]);
 
   // Handle token selection
   const handleTokenSelect = (token: FlowToken) => {
@@ -367,14 +388,14 @@ function FlowSwapBox({
       const amountOut = parseFloat(swapState.toAmount);
       const minAmountOut = amountOut * (1 - swapState.slippage / 100);
 
-      let txId;
-      if (swapState.fromToken.symbol === "FLOW" && swapState.toToken.symbol === "TEST") {
-        txId = await flowClient.swapFlowToTestToken(amountIn, minAmountOut);
-      } else if (swapState.fromToken.symbol === "TEST" && swapState.toToken.symbol === "FLOW") {
-        txId = await flowClient.swapTestTokenToFlow(amountIn, minAmountOut);
-      } else {
-        throw new Error("Unsupported swap direction");
-      }
+      // Use the new executeSwap function
+      const txId = await flowClient.executeSwap(
+        swapState.fromToken.symbol,
+        swapState.toToken.symbol,
+        amountIn,
+        minAmountOut,
+        user.addr
+      );
 
       setSwapState((p) => ({ 
         ...p, 
@@ -384,11 +405,13 @@ function FlowSwapBox({
         toAmount: ""
       }));
 
-      // Refresh balances after successful swap
+      // Refresh balances and pool info after successful swap
       setTimeout(async () => {
         try {
           const balances = await flowClient.refreshBalances(user.addr);
+          const info = await flowClient.getPoolInfo();
           
+          setPoolInfo(info);
           setTokensLive([
             {
               ...defaultTokens[0],
@@ -877,7 +900,17 @@ function BalanceContent({
   const [balances, setBalances] = useState({
     flow: 0,
     test: 0,
-    usdc: 0
+    usdc: 0,
+    lp: 0
+  });
+  const [poolInfo, setPoolInfo] = useState({
+    tokenA: "FLOW",
+    tokenB: "TEST", 
+    reserveA: 0,
+    reserveB: 0,
+    totalLiquidity: 0,
+    swapFee: 0,
+    spotPrice: 0
   });
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -887,10 +920,46 @@ function BalanceContent({
     return new FlowSwapClient();
   }, []);
 
+  // Fetch pool info on component mount
+  useEffect(() => {
+    const fetchPoolInfo = async () => {
+      try {
+        console.log('🧪 Testing pool info contract...');
+        console.log('📡 Calling FlowSwap.getPoolInfo()...');
+        const info = await flowClient.getPoolInfo();
+        console.log('✅ Pool info contract test PASSED:', info);
+        console.log('📊 Pool Reserves - FLOW:', info.reserveA, 'TEST:', info.reserveB);
+        console.log('💰 Total Liquidity:', info.totalLiquidity);
+        console.log('💵 Spot Price:', info.spotPrice);
+        console.log('🔄 Swap Fee:', info.swapFee);
+        setPoolInfo(info);
+      } catch (error) {
+        console.error("❌ Pool info contract test FAILED:", error);
+        console.log("💡 Contract Status: Not deployed or missing functions");
+        console.log("🔧 Expected functions: getFlowReserve(), getTestTokenReserve(), getTotalLPSupply()");
+        
+        // Use fallback demo data
+        const demoData = {
+          tokenA: "FLOW",
+          tokenB: "TEST",
+          reserveA: 110,
+          reserveB: 136.4,
+          totalLiquidity: 122.47,
+          swapFee: 0.003,
+          spotPrice: 1.24
+        };
+        console.log('📋 Using demo data:', demoData);
+        setPoolInfo(demoData);
+      }
+    };
+
+    fetchPoolInfo();
+  }, [flowClient]);
+
   // Fetch balances when user connects
   useEffect(() => {
     if (!user?.addr) {
-      setBalances({ flow: 0, test: 0, usdc: 0 });
+      setBalances({ flow: 0, test: 0, usdc: 0, lp: 0 });
       setLastUpdated(null);
       return;
     }
@@ -905,12 +974,26 @@ function BalanceContent({
           flowClient.getTestTokenBalance(user.addr)
         ]);
 
-        console.log('Fetched balances:', { flowBalance, testTokenBalance });
+        // Test LP balance separately with detailed logging
+        let lpBalance = 0;
+        try {
+          console.log('🧪 Testing LP balance contract for:', user.addr);
+          lpBalance = await flowClient.getLPBalance(user.addr);
+          console.log('✅ LP balance contract test PASSED:', lpBalance);
+        } catch (error) {
+          console.error("❌ LP balance contract test FAILED:", error);
+          console.log("💡 LP Vault Status: Not set up or contract missing");
+          console.log("🔧 Expected: LP token vault at /storage/lpTokenVault");
+          lpBalance = 0;
+        }
+
+        console.log('📊 All balances:', { flowBalance, testTokenBalance, lpBalance });
 
         setBalances({
           flow: flowBalance,
           test: testTokenBalance,
-          usdc: 0 // USDC balance would need separate implementation
+          usdc: 0, // USDC balance would need separate implementation
+          lp: lpBalance
         });
         setLastUpdated(new Date());
       } catch (error) {
@@ -929,13 +1012,22 @@ function BalanceContent({
   const testPrice = 0.67; // Fallback price for TEST token
   const usdcPrice = 1.0; // USDC is stable
 
+  // Calculate LP token value based on pool reserves
+  const lpTokenValue = poolInfo.totalLiquidity > 0 
+    ? ((poolInfo.reserveA * flowPrice) + (poolInfo.reserveB * testPrice)) / poolInfo.totalLiquidity
+    : 0;
+
   const portfolioValue = 
     (balances.flow * flowPrice) + 
     (balances.test * testPrice) + 
-    (balances.usdc * usdcPrice);
+    (balances.usdc * usdcPrice) +
+    (balances.lp * lpTokenValue);
 
-  const availableValue = portfolioValue; // All tokens are available for now
-  const stakedValue = 0; // No staking implemented yet
+  const availableValue = 
+    (balances.flow * flowPrice) + 
+    (balances.test * testPrice) + 
+    (balances.usdc * usdcPrice);
+  const stakedValue = balances.lp * lpTokenValue; // LP tokens are considered "staked"
   const rewardsValue = 0; // No rewards implemented yet
 
   // Format currency
@@ -985,6 +1077,12 @@ function BalanceContent({
           </div>
           <div className="text-white/40 text-xs mt-1">
             {lastUpdated && `Last updated: ${lastUpdated.toLocaleTimeString()}`}
+          </div>
+          {/* Contract Test Status */}
+          <div className="text-white/30 text-xs mt-2 p-2 bg-white/5 rounded">
+            🧪 Pool TVL: ${formatCurrency((poolInfo.reserveA * flowPrice) + (poolInfo.reserveB * testPrice))} | 
+            LP Supply: {formatTokenAmount(poolInfo.totalLiquidity)} | 
+            Price: {poolInfo.spotPrice.toFixed(3)}
           </div>
         </div>
         <div className="grid grid-cols-3 gap-4 mt-4">
@@ -1089,6 +1187,40 @@ function BalanceContent({
             </div>
           </div>
 
+          {/* LP Token */}
+          <div className="bg-black/60 border border-white/10 rounded-2xl p-4 hover:bg-white/5 transition-colors">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">LP</span>
+                </div>
+                <div>
+                  <div className="text-white font-semibold">FLOW/TEST LP</div>
+                  <div className="text-white/60 text-sm">Liquidity Pool Token</div>
+                </div>
+              </div>
+              <div className="text-right">
+                {isLoading ? (
+                  <div className="space-y-1">
+                    <div className="animate-pulse bg-white/10 h-4 w-20 rounded"></div>
+                    <div className="animate-pulse bg-white/10 h-3 w-16 rounded"></div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-white font-semibold">
+                      {formatTokenAmount(balances.lp)} LP
+                    </div>
+                    <div className="text-white/60 text-sm">
+                      Pool Share: {balances.lp > 0 && poolInfo.totalLiquidity > 0 
+                        ? ((balances.lp / poolInfo.totalLiquidity) * 100).toFixed(2) 
+                        : '0.00'}%
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* USDC Token - Placeholder */}
           <div className="bg-black/60 border border-white/10 rounded-2xl p-4 hover:bg-white/5 transition-colors opacity-50">
             <div className="flex items-center justify-between">
@@ -1186,14 +1318,28 @@ function FlowSwapDemo() {
   const [isAdding, setIsAdding] = useState(false);
   const handleAddLiquidity = async () => {
     if (!user?.addr) return;
-    const amt = Number(poolAmount);
-    if (!Number.isFinite(amt) || amt <= 0) return;
+    const amountA = Number(poolAmount);
+    if (!Number.isFinite(amountA) || amountA <= 0) return;
+    
     try {
       setIsAdding(true);
-      await poolsClient.addFlowLiquidity(amt, FLOW_CONFIG.SWAP_CONTRACT);
+      
+      // Calculate optimal liquidity amounts
+      const optimal = await poolsClient.calculateOptimalLiquidity(amountA);
+      console.log('Optimal liquidity amounts:', optimal);
+      
+      // Add liquidity with calculated amounts
+      const txId = await poolsClient.addLiquidity(optimal.amountA, optimal.amountB, user.addr);
+      console.log('Liquidity added, txId:', txId);
+      
       setPoolAmount("");
+      
+      // Refresh pool info
+      const info = await flowClient.getPoolInfo();
+      setPoolInfo(info);
+      
     } catch (e) {
-      console.error(e);
+      console.error('Error adding liquidity:', e);
     } finally {
       setIsAdding(false);
     }
