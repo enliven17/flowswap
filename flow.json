@@ -11,6 +11,12 @@
 			"aliases": {
 				"testnet": "0c0c904844c9a720"
 			}
+		},
+		"FlowSwapActionsHandler": {
+			"source": "./contracts/FlowSwapCallbackHandler.cdc",
+			"aliases": {
+				"testnet": "0c0c904844c9a720"
+			}
 		}
 	},
 	"networks": {

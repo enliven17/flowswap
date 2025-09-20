@@ -1,6 +1,6 @@
-# FlowSwap
+# FlowSwap 🚀
 
-A decentralized token swap application **built on the Flow blockchain**, featuring real-time price feeds and seamless token trading between FLOW and TestToken (a custom fungible token for demo purposes).
+A next-generation decentralized exchange (DEX) **built on the Flow blockchain**, showcasing the latest **Flow Actions** and **Scheduled Callbacks** features with advanced UI/UX and seamless token trading.
 
 ## 🌊 Built on Flow Blockchain
 
@@ -18,13 +18,32 @@ This project is built on the **Flow blockchain** using:
 [![ReWTF](https://img.shields.io/badge/ReWTF-Participant-blue?style=for-the-badge&logo=flow&logoColor=white)](https://github.com/onflow/rewtf-registry)
 [![Flow](https://img.shields.io/badge/Built%20on-Flow-00EF8B?style=for-the-badge&logo=flow&logoColor=white)](https://flow.com)
 
-## Features
+## ✨ Features
 
-- **Real-time Price Feeds**: Live price updates via WebSocket connection
-- **TestToken Vault Management**: Automatic setup of TestToken vaults for new users
-- **Flow Blockchain Integration**: Native support for Flow testnet
-- **Modern UI**: Beautiful, responsive interface with animations
-- **Error Handling**: Graceful handling of connection issues and missing vaults
+### Core DEX Functionality
+- **Token Swapping**: Seamless FLOW ↔ TEST token exchanges with AMM
+- **Liquidity Pools**: Add/remove liquidity with LP token rewards  
+- **Real-time Updates**: Live price feeds and balance tracking
+- **Slippage Protection**: Configurable slippage tolerance
+
+### Flow Actions Integration ⚡
+- **Composable Operations**: Source → Swap → Sink patterns
+- **Atomic Execution**: All operations succeed or fail together
+- **Event Traceability**: UniqueIdentifier system for operation tracking
+- **Protocol Agnostic**: Standardized interfaces across DeFi protocols
+
+### Scheduled Callbacks 🕒
+- **Automated Trading**: Recurring swaps without external infrastructure
+- **User-defined Intervals**: 5min, 1hr, 1day scheduling options
+- **Autonomous Execution**: Smart contracts execute at specified times
+- **Fee Management**: Automatic fee calculation and payment
+
+### Advanced UI/UX 🎨
+- **Glass Morphism Design**: Modern, translucent interface
+- **Smooth Animations**: Framer Motion powered transitions
+- **Unified Layout**: Consistent 650px card heights
+- **Modern Scrollbars**: Ultra-minimal dark scrollbar design
+- **Responsive Design**: Works perfectly on all devices
 
 ## Live Price System
 

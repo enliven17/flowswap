@@ -12,7 +12,9 @@ import {
   ArrowUp,
   ArrowDown,
   Droplets,
-  Wallet
+  Wallet,
+  Clock,
+  ArrowLeftRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import GlassNavbar from './glass-navbar';
@@ -25,6 +27,7 @@ import {
   FlowSwapClient, 
   defaultTokens 
 } from "@/bindings/flow-bindings";
+import { flowActionsClient } from "@/actions/FlowActionsClient";
 import { FlowToken, SwapState } from "@/types/tokens";
 import { useLivePrice } from "@/hooks/useLivePrice";
 import { FLOW_CONFIG } from "@/config/flow";
@@ -1639,6 +1642,121 @@ function FlowSwapDemo() {
                         🧪 Running on Flow Testnet
                       </span>
                     </div>
+                  </div>
+                </div>
+              </motion.div>
+            ) : activeNavItem === 'actions' ? (
+              <motion.div
+                key="actions-panel"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                className="w-full max-w-md mx-auto"
+              >
+                <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6 min-h-[650px]">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3 mb-1">
+                      <Zap className="text-yellow-400 w-7 h-7" />
+                      <h2 className="text-2xl font-bold text-white tracking-tight">Flow Actions</h2>
+                      <div className="flex items-center gap-1 ml-auto">
+                        <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                        <span className="text-xs text-white/60">Composable DeFi</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Composable Swap Section */}
+                  <div className="mb-6">
+                    <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                      <ArrowLeftRight className="w-4 h-4" />
+                      Composable Swap
+                    </h3>
+                    <div className="border border-white/10 rounded-2xl p-4 bg-white/5">
+                      <p className="text-white/70 text-sm mb-3">
+                        Execute atomic swaps using Flow Actions pattern with full traceability
+                      </p>
+                      <button
+                        onClick={async () => {
+                          if (!user?.addr) {
+                            await connect();
+                            return;
+                          }
+                          try {
+                            await flowActionsClient.executeComposableSwap(
+                              "FLOW", "TEST", 1.0, 0.9, user.addr
+                            );
+                          } catch (error) {
+                            console.error("Composable swap failed:", error);
+                          }
+                        }}
+                        className="w-full px-4 py-2 rounded-lg border border-yellow-400/30 text-yellow-300 hover:bg-yellow-400/10 text-sm font-medium"
+                      >
+                        {user?.addr ? 'Execute Composable Swap' : 'Connect Wallet'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Scheduled Callbacks Section */}
+                  <div className="mb-6">
+                    <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      Scheduled Callbacks
+                    </h3>
+                    <div className="border border-white/10 rounded-2xl p-4 bg-white/5">
+                      <p className="text-white/70 text-sm mb-3">
+                        Schedule recurring swaps that execute automatically
+                      </p>
+                      <div className="space-y-3">
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            placeholder="Amount"
+                            className="flex-1 bg-transparent border border-white/20 rounded-lg px-3 py-2 text-white placeholder:text-white/40 text-sm"
+                          />
+                          <select className="bg-black/50 border border-white/20 rounded-lg px-3 py-2 text-white text-sm">
+                            <option value="300">5 min</option>
+                            <option value="3600">1 hour</option>
+                            <option value="86400">1 day</option>
+                          </select>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            if (!user?.addr) {
+                              await connect();
+                              return;
+                            }
+                            try {
+                              await flowActionsClient.scheduleRecurringSwap(
+                                "FLOW", "TEST", 1.0, 300, user.addr
+                              );
+                            } catch (error) {
+                              console.error("Scheduling failed:", error);
+                            }
+                          }}
+                          className="w-full px-4 py-2 rounded-lg border border-purple-400/30 text-purple-300 hover:bg-purple-400/10 text-sm font-medium"
+                        >
+                          {user?.addr ? 'Schedule Recurring Swap' : 'Connect Wallet'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Flow Actions Benefits */}
+                  <div className="border border-white/10 rounded-2xl p-4 bg-white/5">
+                    <h4 className="text-white font-medium mb-2">Flow Actions Benefits</h4>
+                    <ul className="text-white/60 text-sm space-y-1">
+                      <li>• Atomic composition of DeFi operations</li>
+                      <li>• Event traceability with UniqueIdentifier</li>
+                      <li>• Protocol-agnostic interfaces</li>
+                      <li>• Scheduled & recurring transactions</li>
+                    </ul>
+                  </div>
+
+                  <div className="mt-4 text-center">
+                    <span className="text-xs text-white/50 bg-white/10 px-3 py-1 rounded-full">
+                      ⚡ Powered by Flow Actions & Callbacks
+                    </span>
                   </div>
                 </div>
               </motion.div>

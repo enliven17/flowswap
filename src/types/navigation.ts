@@ -11,4 +11,4 @@ export interface NavigationState {
   history: string[];
 }
 
-export type NavItemId = 'balance' | 'swap' | 'pools' | 'bridge' | 'info';
+export type NavItemId = 'balance' | 'swap' | 'pools' | 'bridge' | 'info' | 'actions';

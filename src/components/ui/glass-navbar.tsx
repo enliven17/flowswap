@@ -6,7 +6,8 @@ import {
   ArrowLeftRight, 
   Droplets, 
   ArrowRightLeft, 
-  Info 
+  Info,
+  Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NavItem, NavItemId } from '@/types/navigation';
@@ -47,6 +48,11 @@ const GlassNavbar: React.FC<GlassNavbarProps> = ({
       id: 'info',
       label: 'Info',
       icon: <Info className="w-5 h-5" />
+    },
+    {
+      id: 'actions',
+      label: 'Actions',
+      icon: <Zap className="w-5 h-5" />
     }
   ];
 
