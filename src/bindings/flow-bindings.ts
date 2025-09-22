@@ -30,6 +30,40 @@ export class FlowSwapClient {
     }
   }
 
+  async hasFlowVault(address: string): Promise<boolean> {
+    try {
+      const result = await query({
+        cadence: `
+          import FungibleToken from 0x9a0766d93b6608b7
+          import FlowToken from 0x7e60df042a9c0868
+          access(all) fun main(address: Address): Bool {
+            let account = getAccount(address)
+            return account.capabilities.get<&FlowToken.Vault>(/public/flowTokenBalance).check()
+          }
+        `,
+        args: (arg: typeof FlowSwapClient.argBuilder, t: typeof FlowSwapClient.cadenceTypes) => [
+          arg(address, t.Address as unknown)
+        ]
+      });
+      return result === true;
+    } catch {
+      return false;
+    }
+  }
+
+  async setupFlowVault(): Promise<string> {
+    try {
+      const result = await mutate({
+        cadence: FLOW_TRANSACTIONS.SETUP_FLOW_VAULT,
+        args: (_arg: typeof FlowSwapClient.argBuilder, _t: typeof FlowSwapClient.cadenceTypes) => [],
+      });
+      return result;
+    } catch (error) {
+      console.error("Error setting up Flow vault:", error);
+      throw error;
+    }
+  }
+
   // Get Flow balance for an address
   async getFlowBalance(address: string): Promise<number> {
     try {
@@ -86,8 +120,8 @@ export class FlowSwapClient {
     try {
       const result = await query({
         cadence: `
-          import FungibleToken from 0xee82856bf20e2aa6
-          import TestToken from 0xf8d6e0586b0a20c7
+          import FungibleToken from 0x9a0766d93b6608b7
+          import TestToken from 0x0c0c904844c9a720
           access(all) fun main(address: Address): Bool {
             let account = getAccount(address)
             let vaultCap = account.capabilities.get<&TestToken.Vault>(/public/testTokenVault)
