@@ -1,6 +1,6 @@
 // Flow token types
 export interface FlowToken {
-  symbol: "FLOW" | "TEST";
+  symbol: "FLOW" | "TEST" | "TESTBTC";
   name: string;
   icon: string;
   address: string;

@@ -517,5 +517,14 @@ export const defaultTokens: FlowToken[] = [
     balance: 0,
     price: 1, // Test token price
     decimals: 8
+  },
+  {
+    symbol: "TESTBTC",
+    name: "Test Bitcoin",
+    icon: "/placeholder.svg",
+    address: FLOW_CONFIG.TOKENS.TESTBTC.address,
+    balance: 0,
+    price: 42000, // Higher mock price for BTC-like asset
+    decimals: 8
   }
 ]; 

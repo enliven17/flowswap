@@ -17,6 +17,12 @@
 			"aliases": {
 				"testnet": "0c0c904844c9a720"
 			}
+		},
+		"TestBTC": {
+			"source": "./contracts/TestBTC.cdc",
+			"aliases": {
+				"testnet": "0c0c904844c9a720"
+			}
 		}
 	},
 	"networks": {
@@ -71,7 +77,8 @@
 		"testnet": {
 			"testnet-deployer": [
 				"TestToken",
-				"FlowSwap"
+				"FlowSwap",
+				"TestBTC"
 			]
 		}
 	}

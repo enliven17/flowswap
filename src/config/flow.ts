@@ -1,22 +1,22 @@
 import { config } from "@onflow/fcl";
 
-// Flow Emulator Configuration (updated for local development)
+// Flow Testnet Configuration
 export const FLOW_CONFIG = {
-  // Emulator RPC endpoints
-  ACCESS_NODE: import.meta.env.VITE_FLOW_ACCESS_NODE || "http://127.0.0.1:8888",
-  WALLET_DISCOVERY: import.meta.env.VITE_FLOW_WALLET_DISCOVERY || "https://fcl-discovery.onflow.org/local/authn",
+  // Testnet RPC endpoints
+  ACCESS_NODE: import.meta.env.VITE_FLOW_ACCESS_NODE || "https://rest-testnet.onflow.org",
+  WALLET_DISCOVERY: import.meta.env.VITE_FLOW_WALLET_DISCOVERY || "https://fcl-discovery.onflow.org/testnet/authn",
   
-  // Emulator contract addresses
-  FLOW_TOKEN: import.meta.env.VITE_FLOW_TOKEN_ADDRESS || "0x0ae53cb6e3f42a79",
-  TEST_TOKEN: import.meta.env.VITE_TEST_TOKEN_ADDRESS || "0xf8d6e0586b0a20c7",  // Updated TestToken address
+  // Testnet contract addresses
+  FLOW_TOKEN: import.meta.env.VITE_FLOW_TOKEN_ADDRESS || "0x9a0766d93b6608b7",
+  TEST_TOKEN: import.meta.env.VITE_TEST_TOKEN_ADDRESS || "0x0c0c904844c9a720",  // Latest TestToken address
   
-  // Emulator token configurations
+  // Testnet token configurations
   TOKENS: {
     FLOW: {
       name: "Flow",
       symbol: "FLOW",
       decimals: 8,
-      address: import.meta.env.VITE_FLOW_TOKEN_ADDRESS || "0x0ae53cb6e3f42a79",
+      address: import.meta.env.VITE_FLOW_TOKEN_ADDRESS || "0x9a0766d93b6608b7",
       logo: "/flow.svg",
       description: "Native Flow token"
     },
@@ -24,37 +24,45 @@ export const FLOW_CONFIG = {
       name: "Test Token", 
       symbol: "TEST", 
       decimals: 8, 
-      address: import.meta.env.VITE_TEST_TOKEN_ADDRESS || "0xf8d6e0586b0a20c7", 
+      address: import.meta.env.VITE_TEST_TOKEN_ADDRESS || "0x0c0c904844c9a720", 
       logo: "/test-token.svg", 
       description: "Test token for FlowSwap" 
+    },
+    TESTBTC: {
+      name: "Test Bitcoin",
+      symbol: "TESTBTC",
+      decimals: 8,
+      address: import.meta.env.VITE_TESTBTC_ADDRESS || "0x0c0c904844c9a720", // TODO: replace with real address
+      logo: "/placeholder.svg",
+      description: "Test BTC token for FlowSwap"
     }
   },
   
-  // Swap contract address
-  SWAP_CONTRACT: import.meta.env.VITE_FLOW_SWAP_ADDRESS || "0xf8d6e0586b0a20c7", // Updated contract address
+  // Swap contract (placeholder - you'll need to deploy your own)
+  SWAP_CONTRACT: import.meta.env.VITE_FLOW_SWAP_ADDRESS || "0x0c0c904844c9a720", // Latest contract address
 
   // Future multi-pool support (single default for now)
   POOLS: [
     {
       id: "flow-test",
       name: "FLOW/TEST",
-      address: import.meta.env.VITE_FLOW_SWAP_ADDRESS || "0xf8d6e0586b0a20c7",
+      address: import.meta.env.VITE_FLOW_SWAP_ADDRESS || "0x0c0c904844c9a720",
       tokens: ["FLOW", "TEST"],
       type: "stable",
     },
   ],
   
   // Network configuration
-  NETWORK: "emulator",
-  CHAIN_ID: "emulator"
+  NETWORK: "testnet",
+  CHAIN_ID: "testnet"
 };
 
 // Initialize Flow configuration
 config({
   "accessNode.api": FLOW_CONFIG.ACCESS_NODE,
   "discovery.wallet": FLOW_CONFIG.WALLET_DISCOVERY,
-  "0x0ae53cb6e3f42a79": FLOW_CONFIG.FLOW_TOKEN,
-  "0xf8d6e0586b0a20c7": FLOW_CONFIG.TEST_TOKEN,
+  "0x9a0766d93b6608b7": FLOW_CONFIG.FLOW_TOKEN,
+  "0x0c0c904844c9a720": FLOW_CONFIG.TEST_TOKEN,
 });
 
 // Flow transaction templates
