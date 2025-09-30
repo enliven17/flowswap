@@ -17,3 +17,4 @@ try {
   console.error('❌ Failed to deploy TestMETU:', e.message);
   process.exit(1);
 }
+
