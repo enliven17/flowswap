@@ -11,24 +11,6 @@
 			"aliases": {
 				"testnet": "0c0c904844c9a720"
 			}
-		},
-		"TestXRP": {
-			"source": "./contracts/TestXRP.cdc",
-			"aliases": {
-				"testnet": "0c0c904844c9a720"
-			}
-		},
-		"TestBTC": {
-			"source": "./contracts/TestBTC.cdc",
-			"aliases": {
-				"testnet": "0c0c904844c9a720"
-			}
-		},
-		"TestForte": {
-			"source": "./contracts/TestForte.cdc",
-			"aliases": {
-				"testnet": "0c0c904844c9a720"
-			}
 		}
 	},
 	"networks": {
@@ -77,16 +59,13 @@
 		"emulator": {
 			"emulator-account": [
 				"TestToken",
-				"TestForte",
 				"FlowSwap"
 			]
 		},
 		"testnet": {
 			"testnet-deployer": [
 				"TestToken",
-				"TestForte",
-				"FlowSwap",
-				"TestBTC"
+				"FlowSwap"
 			]
 		}
 	}
