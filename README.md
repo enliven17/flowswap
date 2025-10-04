@@ -1,6 +1,6 @@
 # FlowSwap 🚀
 
-A next-generation decentralized exchange (DEX) **built on the Flow blockchain**, showcasing the latest **Flow Actions** and **Scheduled Callbacks** features with advanced UI/UX and seamless token trading.
+A next-generation decentralized exchange (DEX) **built on the Flow blockchain**, showcasing the latest **Flow Actions** and **Scheduled Callbacks** features with advanced UI/UX and seamless token trading
 
 ## 🌊 Built on Flow Blockchain
 
