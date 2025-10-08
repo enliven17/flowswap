@@ -3,6 +3,8 @@ import FlowToken from 0x0ae53cb6e3f42a79
 import TestToken from 0xf8d6e0586b0a20c7
 import FlowSwapCallbackHandler from 0xf8d6e0586b0a20c7
 import FlowCallbackScheduler from 0xf8d6e0586b0a20c7
+import DeFiActions from 0xf8d6e0586b0a20c7
+import FungibleTokenConnectors from 0xf8d6e0586b0a20c7
 
 /// Setup Flow Actions and Scheduled Callbacks for FlowSwap
 transaction {
@@ -40,6 +42,27 @@ transaction {
             
             log("TestToken vault created and capability published")
         }
+        
+        // Test DeFi Actions functionality
+        let uniqueID = DeFiActions.createUniqueIdentifier()
+        log("Created unique identifier: ".concat(uniqueID.toString()))
+        
+        // Test FungibleTokenConnectors
+        let withdrawCap = signer.capabilities.storage.issue<auth(FungibleToken.Withdraw) &{FungibleToken.Vault}>(/storage/flowTokenVault)
+        let source = FungibleTokenConnectors.VaultSource(
+            min: 0.0,
+            withdrawVault: withdrawCap,
+            uniqueID: uniqueID
+        )
+        log("VaultSource created successfully")
+        
+        let depositCap = signer.capabilities.get<&{FungibleToken.Vault}>(/public/flowTokenReceiver)
+        let sink = FungibleTokenConnectors.VaultSink(
+            max: nil,
+            depositVault: depositCap,
+            uniqueID: uniqueID
+        )
+        log("VaultSink created successfully")
         
         log("Flow Actions setup completed successfully")
     }

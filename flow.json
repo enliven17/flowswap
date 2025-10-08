@@ -1,5 +1,29 @@
 {
 	"contracts": {
+		"DeFiActions": {
+			"source": "./contracts/DeFiActions.cdc",
+			"aliases": {
+				"testnet": "0c0c904844c9a720"
+			}
+		},
+		"FungibleTokenConnectors": {
+			"source": "./contracts/FungibleTokenConnectors.cdc",
+			"aliases": {
+				"testnet": "0c0c904844c9a720"
+			}
+		},
+		"FlowCallbackScheduler": {
+			"source": "./contracts/FlowCallbackScheduler.cdc",
+			"aliases": {
+				"testnet": "0c0c904844c9a720"
+			}
+		},
+		"FlowSwapCallbackHandler": {
+			"source": "./contracts/FlowSwapCallbackHandler.cdc",
+			"aliases": {
+				"testnet": "0c0c904844c9a720"
+			}
+		},
 		"FlowSwap": {
 			"source": "./contracts/FlowSwap.cdc",
 			"aliases": {
@@ -58,12 +82,20 @@
 	"deployments": {
 		"emulator": {
 			"emulator-account": [
+				"DeFiActions",
+				"FungibleTokenConnectors",
+				"FlowCallbackScheduler",
+				"FlowSwapCallbackHandler",
 				"TestToken",
 				"FlowSwap"
 			]
 		},
 		"testnet": {
 			"testnet-deployer": [
+				"DeFiActions",
+				"FungibleTokenConnectors",
+				"FlowCallbackScheduler",
+				"FlowSwapCallbackHandler",
 				"TestToken",
 				"FlowSwap"
 			]

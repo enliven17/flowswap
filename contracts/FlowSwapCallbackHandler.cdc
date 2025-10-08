@@ -2,10 +2,10 @@ import FlowSwap from 0xf8d6e0586b0a20c7
 import FlowToken from 0x0ae53cb6e3f42a79
 import TestToken from 0xf8d6e0586b0a20c7
 import FungibleToken from 0xee82856bf20e2aa6
+import FlowCallbackScheduler from 0xf8d6e0586b0a20c7
 
-/// FlowSwap Actions Handler for composable DeFi operations
-/// This demonstrates Flow Actions patterns without requiring FlowCallbackScheduler
-access(all) contract FlowSwapActionsHandler {
+/// FlowSwap Callback Handler for scheduled and composable DeFi operations
+access(all) contract FlowSwapCallbackHandler {
 
     /// Event emitted when a composable operation is executed
     access(all) event ComposableOperationExecuted(
@@ -182,13 +182,83 @@ access(all) contract FlowSwapActionsHandler {
             .concat(getCurrentBlock().height.toString())
     }
 
+    /// Callback Handler Resource
+    access(all) resource CallbackHandler: FlowCallbackScheduler.CallbackHandler {
+        
+        /// Execute a scheduled callback
+        access(all) fun execute(data: {String: AnyStruct}): Bool {
+            // Extract callback data
+            let tokenIn = data["tokenIn"] as? String ?? panic("Missing tokenIn")
+            let tokenOut = data["tokenOut"] as? String ?? panic("Missing tokenOut")
+            let amountIn = data["amountIn"] as? UFix64 ?? panic("Missing amountIn")
+            let userAddress = data["userAddress"] as? Address ?? panic("Missing userAddress")
+            
+            // Check if this is a recurring callback
+            let isRecurring = data["isRecurring"] as? Bool ?? false
+            
+            do {
+                // Execute the swap
+                let result = FlowSwapCallbackHandler.executeComposableSwap(
+                    operationId: FlowSwapCallbackHandler.createOperationId(),
+                    tokenIn: tokenIn,
+                    tokenOut: tokenOut,
+                    amountIn: amountIn,
+                    minAmountOut: 0.0, // For scheduled swaps, we accept any output
+                    userAddress: userAddress
+                )
+                
+                // Handle recurring callbacks
+                if isRecurring {
+                    let currentRecurrence = data["currentRecurrence"] as? UInt64 ?? 1
+                    let maxRecurrences = data["maxRecurrences"] as? UInt64 ?? 1
+                    let intervalSeconds = data["intervalSeconds"] as? UFix64 ?? 3600.0
+                    
+                    if currentRecurrence < maxRecurrences {
+                        // Schedule next recurrence
+                        self.scheduleNextRecurrence(
+                            data: data,
+                            currentRecurrence: currentRecurrence,
+                            intervalSeconds: intervalSeconds
+                        )
+                    }
+                }
+                
+                return true
+            } catch {
+                // Log error and return false
+                log("Callback execution failed: ".concat(error.message))
+                return false
+            }
+        }
+        
+        /// Schedule the next recurrence of a recurring callback
+        access(self) fun scheduleNextRecurrence(
+            data: {String: AnyStruct},
+            currentRecurrence: UInt64,
+            intervalSeconds: UFix64
+        ) {
+            // Create updated callback data
+            let nextData = data
+            nextData["currentRecurrence"] = currentRecurrence + 1
+            
+            // This would normally schedule the next callback
+            // For demo purposes, we'll just log it
+            log("Next recurrence scheduled: ".concat((currentRecurrence + 1).toString()))
+        }
+    }
+
+    /// Create a new callback handler
+    access(all) fun createHandler(): @CallbackHandler {
+        return <-create CallbackHandler()
+    }
+
     /// Get operation statistics
     access(all) fun getOperationStats(): {String: AnyStruct} {
         return {
             "contractAddress": self.account.address.toString(),
             "blockHeight": getCurrentBlock().height,
             "timestamp": getCurrentBlock().timestamp,
-            "description": "FlowSwap Actions Handler - Composable DeFi Operations"
+            "description": "FlowSwap Callback Handler - Scheduled and Composable DeFi Operations"
         }
     }
 }

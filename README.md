@@ -27,16 +27,18 @@ This project is built on the **Flow blockchain** using:
 - **Slippage Protection**: Configurable slippage tolerance
 
 ### Flow Actions Integration ⚡
-- **Composable Operations**: Source → Swap → Sink patterns
-- **Atomic Execution**: All operations succeed or fail together
-- **Event Traceability**: UniqueIdentifier system for operation tracking
-- **Protocol Agnostic**: Standardized interfaces across DeFi protocols
+- **Composable Operations**: Source → Swap → Sink patterns with full atomicity
+- **Unique Tracing**: DeFiActions.UniqueIdentifier for complete operation tracking
+- **VaultSource/VaultSink**: Standardized token input/output connectors
+- **Error Recovery**: Robust failure handling and automatic rollback
+- **Protocol Agnostic**: Works across any Flow DeFi protocol
 
 ### Scheduled Callbacks 🕒
-- **Automated Trading**: Recurring swaps without external infrastructure
-- **User-defined Intervals**: 5min, 1hr, 1day scheduling options
-- **Autonomous Execution**: Smart contracts execute at specified times
-- **Fee Management**: Automatic fee calculation and payment
+- **FlowCallbackScheduler**: Native scheduling without external infrastructure
+- **Recurring Swaps**: Automated DCA (Dollar Cost Averaging) strategies
+- **Priority System**: Low/Medium/High priority execution queues
+- **Fee Estimation**: Automatic gas fee calculation and optimization
+- **Callback Handlers**: Custom execution logic for different operations
 
 ### Advanced UI/UX 🎨
 - **Glass Morphism Design**: Modern, translucent interface

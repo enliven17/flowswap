@@ -4,70 +4,42 @@ import TestToken from 0xf8d6e0586b0a20c7
 import FlowSwap from 0xf8d6e0586b0a20c7
 import FungibleTokenConnectors from 0xf8d6e0586b0a20c7
 import DeFiActions from 0xf8d6e0586b0a20c7
+import FlowSwapCallbackHandler from 0xf8d6e0586b0a20c7
 
 /// Execute a composable swap using Flow Actions pattern
 transaction(tokenIn: String, tokenOut: String, amountIn: UFix64, minAmountOut: UFix64) {
     
     let uniqueID: DeFiActions.UniqueIdentifier
-    let source: FungibleTokenConnectors.VaultSource
-    let sink: FungibleTokenConnectors.VaultSink
+    let userAddress: Address
     
     prepare(signer: auth(Storage, Capabilities) &Account) {
         // Create unique identifier for tracing this operation
         self.uniqueID = DeFiActions.createUniqueIdentifier()
-        
-        // Create source for input tokens
-        let withdrawCap = signer.capabilities.storage.issue<auth(FungibleToken.Withdraw) &{FungibleToken.Vault}>(
-            tokenIn == "FLOW" ? /storage/flowTokenVault : /storage/testTokenVault
-        )
-        
-        self.source = FungibleTokenConnectors.VaultSource(
-            min: 0.0,
-            withdrawVault: withdrawCap,
-            uniqueID: self.uniqueID
-        )
-        
-        // Create sink for output tokens
-        let depositCap = signer.capabilities.get<&{FungibleToken.Vault}>(
-            tokenOut == "FLOW" ? /public/flowTokenReceiver : /public/testTokenVault
-        )
-        
-        self.sink = FungibleTokenConnectors.VaultSink(
-            max: nil,
-            depositVault: depositCap,
-            uniqueID: self.uniqueID
-        )
+        self.userAddress = signer.address
         
         log("Composable swap initialized with unique ID: ".concat(self.uniqueID.toString()))
+        log("Token pair: ".concat(tokenIn).concat(" -> ").concat(tokenOut))
+        log("Amount in: ".concat(amountIn.toString()))
+        log("Min amount out: ".concat(minAmountOut.toString()))
     }
     
     execute {
-        // Execute the composable workflow atomically
+        // Execute the composable workflow using FlowSwapCallbackHandler
+        let operationId = FlowSwapCallbackHandler.createOperationId()
         
-        // 1. Withdraw tokens from source
-        let tokens <- self.source.withdrawAvailable(maxAmount: amountIn)
-        log("Withdrawn ".concat(tokens.balance.toString()).concat(" tokens from source"))
-        
-        // 2. Execute swap through FlowSwap
-        let swapResult = FlowSwap.executeSwap(
+        let swapResult = FlowSwapCallbackHandler.executeComposableSwap(
+            operationId: operationId,
             tokenIn: tokenIn,
             tokenOut: tokenOut,
-            amountIn: tokens.balance,
+            amountIn: amountIn,
             minAmountOut: minAmountOut,
-            user: self.source.withdrawVault.address
+            userAddress: self.userAddress
         )
-        log("Swap executed. Output: ".concat(swapResult.toString()))
-        
-        // 3. For this demo, we'll handle the token transfer manually
-        // In a real Flow Actions implementation, the swap would return tokens
-        // that we could then deposit to the sink
-        
-        // Clean up the withdrawn vault (it should be empty after swap)
-        assert(tokens.balance == 0.0, message: "Tokens should be consumed by swap")
-        destroy tokens
         
         log("Composable swap completed successfully")
-        log("Operation ID: ".concat(self.uniqueID.toString()))
+        log("Operation ID: ".concat(operationId))
+        log("Unique ID: ".concat(self.uniqueID.toString()))
+        log("Swap result: ".concat(swapResult.toString()))
     }
     
     post {

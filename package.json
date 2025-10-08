@@ -18,6 +18,8 @@
     "deploy:testbtc": "node scripts/deploy-testbtc.js",
     "setup:testbtc": "flow transactions send scripts/deploy-testbtc.cdc --network testnet",
     "price-server": "node scripts/price-server.js",
+    "test:flow-actions": "node scripts/test-flow-actions.js",
+    "setup:flow-actions": "flow transactions send ./transactions/setup_flow_actions.cdc --network emulator",
     "rewtf:commit": "node scripts/rewtf-commit.js",
     "rewtf:status": "echo '🏆 REWTF Status: https://app.databox.com/datawall/fc5f1f7de13471eac8bd5eb2e3d90a752817ac68a86fd6'"
   },
